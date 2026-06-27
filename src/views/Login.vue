@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-logo">🏨</div>
-      <h1 class="login-title">酒店管家</h1>
+      <h1 class="login-title">福源登山酒店</h1>
       <p class="login-subtitle">福源登山酒店管理系统</p>
 
       <div class="form-group">

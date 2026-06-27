@@ -488,7 +488,7 @@ function printReport() {
       .report-footer { text-align: right; margin-top: 20px; font-size: 13px; }
       @media print { body { -webkit-print-color-adjust: exact; } }
     </style></head><body>
-    <h1>🏨 酒店管家 - 营业日报</h1>
+    <h1>🏨 福源登山酒店 - 营业日报</h1>
     <div class="meta">日期: ${reportDate.value} | 报告人: ${reporter.value || '未填写'}</div>`
   
   // 客房收入

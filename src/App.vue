@@ -4,7 +4,7 @@
     <aside class="desktop-sidebar" v-if="isDesktop">
       <div class="sidebar-header" @click="$router.push('/')">
         <span class="sidebar-logo">🏨</span>
-        <span class="sidebar-title">酒店管家</span>
+        <span class="sidebar-title">福源登山酒店</span>
       </div>
       <nav class="sidebar-nav">
         <div v-for="item in navItems" :key="item.path"

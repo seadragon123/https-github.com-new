@@ -3,7 +3,7 @@
     <div class="drawer">
       <div class="drawer-header">
         <span style="font-size:24px">🏨</span>
-        <span class="drawer-title">酒店管家</span>
+        <span class="drawer-title">福源登山酒店</span>
         <span class="drawer-role badge" :class="roleBadge(currentRole)">{{ currentRole }}</span>
       </div>
       <div class="drawer-body">

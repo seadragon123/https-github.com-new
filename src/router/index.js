@@ -50,9 +50,9 @@ router.beforeEach((to, from, next) => {
 
   // 角色路由守卫
   const roleRoutes = {
-    '管理员': ['/', '/rooms', '/bookings', '/guests', '/catering', '/incense', '/expenses',
+    '管理员': ['/', '/rooms', '/bookings', '/checkout', '/guests', '/catering', '/incense', '/expenses',
                '/revenue', '/price-calendar', '/shift-report', '/cleaning', '/maintenance', '/todos', '/profile'],
-    '前台': ['/', '/rooms', '/bookings', '/guests', '/incense', '/expenses',
+    '前台': ['/', '/rooms', '/bookings', '/checkout', '/guests', '/incense', '/expenses',
             '/price-calendar', '/shift-report', '/cleaning', '/maintenance', '/todos', '/profile'],
     '餐厅': ['/catering', '/profile'],
     '财务': ['/revenue', '/expenses', '/shift-report', '/profile'],

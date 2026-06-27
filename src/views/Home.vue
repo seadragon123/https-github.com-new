@@ -6,7 +6,7 @@
         <div class="flex-center" style="gap:4px">
           <button class="btn-icon header-btn" @click="toggleDrawer">☰</button>
           <div>
-            <h1 style="font-size:18px">酒店管家</h1>
+            <h1 style="font-size:18px">福源登山酒店</h1>
             <div class="subtitle">{{ today }}</div>
           </div>
         </div>
