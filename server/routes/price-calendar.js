@@ -38,6 +38,7 @@ router.get('/', (req, res) => {
     const isWeekend = weekDay === 0 || weekDay === 6
     const existing = recordMap[dateStr]
 
+    const showPrice = type !== '全部'
     days.push({
       date: dateStr,
       day: d,
@@ -45,7 +46,8 @@ router.get('/', (req, res) => {
       isWeekend,
       price: existing ? existing.price : (isWeekend ? (DEFAULT_PRICES[type] || 268) + 100 : DEFAULT_PRICES[type] || 268),
       is_holiday: existing ? existing.is_holiday : 0,
-      label: existing ? existing.label : (isWeekend ? '周末' : '')
+      label: existing ? existing.label : (isWeekend ? '周末' : ''),
+      _showPrice: showPrice
     })
   }
 

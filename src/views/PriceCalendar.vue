@@ -29,6 +29,11 @@
       <!-- 日历网格 -->
       <div class="card">
         <div class="card-body" style="padding:8px 12px">
+          <!-- 全部房型时显示价格说明 -->
+          <div v-if="selectedType === '全部'" class="text-sm text-muted mb-8" style="padding:4px 0">
+            💡 各房型平日价格：¥268(标准大床) · ¥298(标准双床) · ¥368(豪华大床) · ¥398(豪华双床) · ¥588(豪华套房)
+            <br>周末自动加价 ¥100。请选择上方具体房型查看价格。
+          </div>
           <div class="calendar-weekdays">
             <div v-for="w in weekDays" :key="w" class="cw-day">{{ w }}</div>
           </div>
@@ -43,7 +48,8 @@
                  }"
                  @click="editDay(day)">
               <div class="cal-day">{{ day.day }}</div>
-              <div class="cal-price" v-if="day.day">¥{{ day.price }}</div>
+              <div class="cal-price" v-if="day.day && day._showPrice !== false">¥{{ day.price }}</div>
+              <div class="cal-price" v-else-if="day.day && day._showPrice === false" style="color:var(--gray-300);font-size:10px">—</div>
               <div class="cal-label" v-if="day.label">{{ day.label }}</div>
             </div>
           </div>
