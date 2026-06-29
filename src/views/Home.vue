@@ -157,10 +157,11 @@
       </div>
     </div>
 
-    <!-- 办理入住 Modal -->
+    <!-- 办理入住 Modal（多客人 + 房价） -->
     <div v-if="showCheckin" class="modal-overlay" @click.self="showCheckin = false">
-      <div class="modal-content">
+      <div class="modal-content" style="max-width:420px">
         <div class="modal-title">🛎️ 办理入住</div>
+
         <div class="form-group">
           <label>选择房间</label>
           <select v-model="checkinForm.room_id" class="form-input form-select">
@@ -170,23 +171,40 @@
             </option>
           </select>
         </div>
-        <div class="form-group">
-          <label>客人姓名</label>
-          <div class="guest-search-wrap">
-            <input v-model="checkinForm.guest_name" class="form-input" placeholder="输入姓名或手机号搜索" @input="searchGuests" @focus="searchGuests" @blur="hideGuestResults" />
-            <div v-if="showGuestResults && guestResults.length > 0" class="guest-results">
-              <div v-for="g in guestResults" :key="g.id" class="guest-result-item" @mousedown.prevent="selectGuest(g)">
-                <span class="gr-name">{{ g.name }}</span>
-                <span class="gr-phone" v-if="g.phone">{{ g.phone }}</span>
-                <span class="gr-vip" v-if="g.vip_level > 0">VIP{{ g.vip_level }}</span>
+
+        <!-- 多客人卡片 -->
+        <div v-for="(g, i) in checkinForm.guests" :key="i" class="guest-card">
+          <div class="guest-card-header">
+            <span class="guest-card-num">👤 客人 {{ i + 1 }}</span>
+            <button v-if="checkinForm.guests.length > 1" class="btn btn-sm btn-danger" @click="removeGuest(i)">✕</button>
+          </div>
+          <div class="guest-card-body">
+            <div class="form-group">
+              <label>姓名 *</label>
+              <input v-model="g.name" class="form-input" placeholder="输入姓名" />
+            </div>
+            <div class="form-group">
+              <label>身份证号</label>
+              <input v-model="g.id_card" class="form-input" placeholder="选填" />
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>联系电话</label>
+                <input v-model="g.phone" class="form-input" placeholder="选填" />
+              </div>
+              <div class="form-group" style="flex:0 0 90px">
+                <label>性别</label>
+                <select v-model="g.gender" class="form-input form-select">
+                  <option value="">—</option>
+                  <option value="男">男</option>
+                  <option value="女">女</option>
+                </select>
               </div>
             </div>
           </div>
         </div>
-        <div class="form-group">
-          <label>联系电话</label>
-          <input v-model="checkinForm.guest_phone" class="form-input" placeholder="选填" />
-        </div>
+        <button class="btn btn-sm btn-outline btn-block mb-8" @click="addGuest">➕ 添加客人</button>
+
         <div class="flex-between gap-4">
           <div class="form-group" style="flex:1">
             <label>入住日期</label>
@@ -196,6 +214,10 @@
             <label>退房日期</label>
             <input v-model="checkinForm.check_out" type="date" class="form-input" />
           </div>
+        </div>
+        <div class="form-group">
+          <label>房价 (¥)</label>
+          <input v-model="checkinForm.amount" type="number" class="form-input" placeholder="0" />
         </div>
         <div class="form-group">
           <label>押金 (¥)</label>
@@ -318,85 +340,72 @@ const formatTime = (t) => t ? t.slice(11, 16) : ''
 
 // 入住操作
 const showCheckin = ref(false)
-const checkinForm = ref({ room_id: '', guest_name: '', guest_phone: '', check_in: '', check_out: '', deposit: 0 })
+const checkinForm = ref({ room_id: '', guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '', amount: 0, deposit: 0 })
 const availableRooms = ref([])
-const guestResults = ref([])
-const showGuestResults = ref(false)
-let guestListCache = []
 
-async function searchGuests() {
-  const q = checkinForm.value.guest_name?.trim() || ''
-  if (q.length < 1) {
-    guestResults.value = []
-    showGuestResults.value = false
-    return
-  }
-  // 第一次搜索时加载客人列表
-  if (guestListCache.length === 0) {
-    try {
-      guestListCache = await api.getGuests()
-    } catch { return }
-  }
-  const lower = q.toLowerCase()
-  guestResults.value = guestListCache.filter(g =>
-    g.name.toLowerCase().includes(lower) ||
-    (g.phone && g.phone.includes(q))
-  ).slice(0, 8)
-  showGuestResults.value = guestResults.value.length > 0
+function addGuest() {
+  checkinForm.value.guests.push({ name: '', id_card: '', phone: '', gender: '' })
 }
-
-function hideGuestResults() {
-  setTimeout(() => { showGuestResults.value = false }, 200)
-}
-
-function selectGuest(g) {
-  checkinForm.value.guest_name = g.name
-  checkinForm.value.guest_phone = g.phone || ''
-  showGuestResults.value = false
-}
-
-const openCheckin = async () => {
-  const today = new Date().toISOString().slice(0, 10)
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-  checkinForm.value = { room_id: '', guest_name: '', guest_phone: '', check_in: today, check_out: tomorrow, deposit: 0 }
-  availableRooms.value = await api.getAvailableRooms()
+function removeGuest(i) {
+  checkinForm.value.guests.splice(i, 1)
 }
 
 watch(showCheckin, async (v) => {
   if (v) {
     const today = new Date().toISOString().slice(0, 10)
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-    checkinForm.value = { room_id: '', guest_name: '', guest_phone: '', check_in: today, check_out: tomorrow, deposit: 0 }
+    checkinForm.value = { room_id: '', guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: today, check_out: tomorrow, amount: 0, deposit: 0 }
     availableRooms.value = await api.getAvailableRooms()
   }
 })
 
 const doCheckin = async () => {
-  if (!checkinForm.value.room_id || !checkinForm.value.guest_name) {
-    showToast('请选择房间并填写客人姓名')
+  if (!checkinForm.value.room_id) {
+    showToast('请选择房间')
     return
   }
-  await api.createBooking(checkinForm.value)
+  const validGuests = checkinForm.value.guests.filter(g => g.name?.trim())
+  if (validGuests.length === 0) {
+    showToast('请至少填写一位客人姓名')
+    return
+  }
+  await api.createBooking({ ...checkinForm.value, guests: validGuests })
   showCheckin.value = false
   showToast('入住办理成功！')
   loadData()
 }
 
-const openReserve = () => {
-  showCheckin.value = true
-  showToast('设置入住信息后，点击「仅预订」先占房号')
-}
-
 const quickCheckin = (room) => {
+  const today = new Date().toISOString().slice(0, 10)
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
   checkinForm.value = {
     room_id: room.id,
-    guest_name: '',
-    guest_phone: '',
-    check_in: new Date().toISOString().slice(0, 10),
-    check_out: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    guests: [{ name: '', id_card: '', phone: '', gender: '' }],
+    check_in: today,
+    check_out: tomorrow,
+    amount: room.price || 0,
     deposit: 0
   }
   showCheckin.value = true
+}
+
+const doReserve = async () => {
+  if (!checkinForm.value.room_id) {
+    showToast('请选择房间')
+    return
+  }
+  const validGuests = checkinForm.value.guests.filter(g => g.name?.trim())
+  if (validGuests.length === 0) {
+    showToast('请至少填写一位客人姓名')
+    return
+  }
+  // 先创建入住订单
+  const result = await api.createBooking({ ...checkinForm.value, guests: validGuests })
+  // 更新为预订状态（不到店，房间标记已预订）
+  await api.updateBookingStatus(result.id, '已预订')
+  showCheckin.value = false
+  showToast('预订成功！已占用房号')
+  loadData()
 }
 
 // 退房操作
@@ -609,4 +618,12 @@ onMounted(loadData)
   border-radius: 8px; display: flex; align-items: center; justify-content: center;
   font-weight: 600; padding: 0 4px;
 }
+
+/* 多客人卡片 */
+.guest-card { background: var(--gray-50); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
+.guest-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.guest-card-num { font-weight: 600; font-size: 13px; }
+.guest-card-body { display: flex; flex-direction: column; gap: 8px; }
+.form-row { display: flex; gap: 10px; }
+.mb-8 { margin-bottom: 8px; }
 </style>

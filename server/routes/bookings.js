@@ -200,6 +200,8 @@ router.patch('/:id', (req, res) => {
 
   if (status === '已入住') {
     runSql('UPDATE rooms SET status = \'已入住\', updated_at = datetime(\'now\',\'localtime\') WHERE id = ?', [booking.room_id])
+  } else if (status === '已预订') {
+    runSql('UPDATE rooms SET status = \'已预订\', updated_at = datetime(\'now\',\'localtime\') WHERE id = ?', [booking.room_id])
   }
 
   res.json({ success: true })
