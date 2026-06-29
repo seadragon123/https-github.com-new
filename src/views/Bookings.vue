@@ -49,7 +49,7 @@
             <button class="btn btn-sm btn-outline" @click.stop="cancelBooking(b)">取消订单</button>
           </div>
           <div v-if="b.status === '已预订'" class="flex-between mt-8">
-            <button class="btn btn-sm btn-primary" @click.stop="directCheckin(b)">直接入住</button>
+            <button class="btn btn-sm btn-primary" @click.stop="openDirectCheckin(b)">直接入住</button>
             <button class="btn btn-sm btn-outline" @click.stop="cancelBooking(b)">取消</button>
           </div>
         </div>
@@ -92,9 +92,15 @@
         </div>
         <div class="flex-between gap-4">
           <div class="form-group" style="flex:1">
-            <label>金额 (¥)</label>
-            <input v-model.number="editForm.amount" type="number" class="form-input" />
+            <label>房价 (元/晚)</label>
+            <input v-model.number="editForm.price_per_night" type="number" min="0" class="form-input" />
           </div>
+          <div class="form-group" style="flex:1">
+            <label>订单金额</label>
+            <div class="form-amount-readonly">¥{{ editAmount }}</div>
+          </div>
+        </div>
+        <div class="flex-between gap-4">
           <div class="form-group" style="flex:1">
             <label>押金 (¥)</label>
             <input v-model.number="editForm.deposit" type="number" class="form-input" />
@@ -107,6 +113,76 @@
         <div class="flex-between mt-8 gap-4">
           <button class="btn btn-outline btn-block" @click="editTarget = null">取消</button>
           <button class="btn btn-primary btn-block" @click="doEdit">💾 保存修改</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 直接入住弹窗（预订 → 入住，可编辑多客人） -->
+    <div v-if="checkinTarget" class="modal-overlay" @click.self="checkinTarget = null">
+      <div class="modal-content" style="max-width:420px">
+        <div class="modal-title">🛎️ {{ checkinTarget.room_no }} 直接入住</div>
+
+        <div v-for="(g, i) in checkinForm.guests" :key="i" class="guest-card">
+          <div class="guest-card-header">
+            <span class="guest-card-num">👤 客人 {{ i + 1 }}</span>
+            <button v-if="checkinForm.guests.length > 1" class="btn btn-sm btn-danger" @click="removeCheckinGuest(i)">✕</button>
+          </div>
+          <div class="guest-card-body">
+            <div class="form-group">
+              <label>姓名 *</label>
+              <input v-model="g.name" class="form-input" placeholder="输入姓名" />
+            </div>
+            <div class="form-group">
+              <label>身份证号</label>
+              <input v-model="g.id_card" class="form-input" placeholder="选填" />
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>联系电话</label>
+                <input v-model="g.phone" class="form-input" placeholder="选填" />
+              </div>
+              <div class="form-group" style="flex:0 0 90px">
+                <label>性别</label>
+                <select v-model="g.gender" class="form-input form-select">
+                  <option value="">—</option>
+                  <option value="男">男</option>
+                  <option value="女">女</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline btn-block mb-8" @click="addCheckinGuest">➕ 添加客人</button>
+
+        <div class="flex-between gap-4">
+          <div class="form-group" style="flex:1">
+            <label>入住日期</label>
+            <input v-model="checkinForm.check_in" type="date" class="form-input" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>退房日期</label>
+            <input v-model="checkinForm.check_out" type="date" class="form-input" />
+          </div>
+        </div>
+        <div class="flex-between gap-4">
+          <div class="form-group" style="flex:1">
+            <label>房价 (元/晚)</label>
+            <input v-model.number="checkinForm.price_per_night" type="number" min="0" class="form-input" placeholder="0" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>订单金额</label>
+            <div class="form-amount-readonly">¥{{ checkinAmount }}</div>
+          </div>
+        </div>
+        <div class="flex-between gap-4">
+          <div class="form-group" style="flex:1">
+            <label>押金 (¥)</label>
+            <input v-model.number="checkinForm.deposit" type="number" class="form-input" placeholder="0" />
+          </div>
+        </div>
+        <div class="flex-between mt-8 gap-4">
+          <button class="btn btn-outline btn-block" @click="checkinTarget = null">取消</button>
+          <button class="btn btn-primary btn-block" @click="doDirectCheckin">🛎️ 确认入住</button>
         </div>
       </div>
     </div>
@@ -157,8 +233,35 @@ const cancelBooking = async (b) => {
   loadBookings()
 }
 
-const directCheckin = async (b) => {
-  await api.updateBookingStatus(b.id, '已入住')
+// 直接入住弹窗（预订→入住，可编辑多客人）
+const checkinTarget = ref(null)
+const checkinForm = ref({ guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '', price_per_night: 0, deposit: 0 })
+
+function addCheckinGuest() {
+  checkinForm.value.guests.push({ name: '', id_card: '', phone: '', gender: '' })
+}
+function removeCheckinGuest(i) {
+  checkinForm.value.guests.splice(i, 1)
+}
+
+const openDirectCheckin = (b) => {
+  checkinTarget.value = b
+  checkinForm.value = {
+    guests: [{ name: b.guest_name || '', id_card: '', phone: b.guest_phone || '', gender: '' }],
+    check_in: b.check_in,
+    check_out: b.check_out,
+    price_per_night: b.price_per_night || b.room_price || 0,
+    deposit: b.deposit || 0
+  }
+}
+
+const doDirectCheckin = async () => {
+  if (!checkinTarget.value) return
+  const validGuests = checkinForm.value.guests.filter(g => g.name?.trim())
+  if (validGuests.length === 0) { showToast('请至少填写一位客人姓名'); return }
+  await api.directCheckin(checkinTarget.value.id, { guests: validGuests, price_per_night: checkinForm.value.price_per_night, deposit: checkinForm.value.deposit })
+  checkinTarget.value = null
+  showToast('✅ 入住成功')
   loadBookings()
 }
 
@@ -172,14 +275,33 @@ const openEdit = (b) => {
     check_out: b.check_out,
     amount: b.amount,
     deposit: b.deposit,
+    price_per_night: b.price_per_night || b.room_price || 0,
     notes: b.notes || ''
   }
 }
 
+const editAmount = computed(() => {
+  const ppn = Number(editForm.value.price_per_night) || 0
+  if (!editForm.value.check_in || !editForm.value.check_out) return 0
+  const start = new Date(editForm.value.check_in)
+  const end = new Date(editForm.value.check_out)
+  const nights = Math.max(1, Math.ceil((end - start) / 86400000))
+  return ppn * nights
+})
+
+const checkinAmount = computed(() => {
+  const ppn = Number(checkinForm.value.price_per_night) || 0
+  if (!checkinForm.value.check_in || !checkinForm.value.check_out) return 0
+  const start = new Date(checkinForm.value.check_in)
+  const end = new Date(checkinForm.value.check_out)
+  const nights = Math.max(1, Math.ceil((end - start) / 86400000))
+  return ppn * nights
+})
+
 const doEdit = async () => {
   if (!editTarget.value) return
   try {
-    await api.updateBooking(editTarget.value.id, editForm.value)
+    await api.updateBooking(editTarget.value.id, { ...editForm.value, amount: editAmount.value })
     editTarget.value = null
     loadBookings()
   } catch (err) {
@@ -212,6 +334,13 @@ onMounted(loadBookings)
 .btn-icon:hover { background: var(--gray-100); }
 .tab-sm { font-size: 11px; padding: 4px 10px; }
 .text-xs { font-size: 11px; }
+.form-amount-readonly { font-size: 16px; font-weight: 700; color: var(--danger, #e74c3c); padding: 6px 0; }
+.guest-card { background: var(--gray-50); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
+.guest-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.guest-card-num { font-weight: 600; font-size: 13px; }
+.guest-card-body { display: flex; flex-direction: column; gap: 8px; }
+.form-row { display: flex; gap: 10px; }
+.mb-8 { margin-bottom: 8px; }
 @media (prefers-color-scheme: dark) {
   .tab-sm { background: var(--gray-100); }
 }

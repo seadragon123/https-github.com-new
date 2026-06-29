@@ -74,7 +74,7 @@ router.get('/daily', (req, res) => {
 
   // 已完成订单（客房收入明细）
   const checkouts = queryAll(`
-    SELECT b.id, b.guest_name, b.check_in, b.check_out, b.amount, r.room_no, r.room_type
+    SELECT b.id, b.guest_name, b.check_in, b.check_out, b.amount, b.price_per_night, r.room_no, r.room_type
     FROM bookings b JOIN rooms r ON b.room_id = r.id
     WHERE b.status = '已完成' AND date(b.updated_at) = ?
     ORDER BY b.updated_at
@@ -139,7 +139,7 @@ router.post('/auto-generate', (req, res) => {
 
   // 查询今日退房（已完成订单）
   const checkouts = queryAll(`
-    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.channel,
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel,
            r.room_no, r.price, r.room_type
     FROM bookings b JOIN rooms r ON b.room_id = r.id
     WHERE b.status = '已完成' AND (b.check_out = ? OR date(b.updated_at) = ?)
@@ -149,7 +149,7 @@ router.post('/auto-generate', (req, res) => {
   // 查询今日新入住的
   const checkoutRoomIds = checkouts.map(c => c.room_id)
   const checkins = queryAll(`
-    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.channel,
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel,
            r.room_no, r.price, r.room_type
     FROM bookings b JOIN rooms r ON b.room_id = r.id
     WHERE b.status = '已入住' AND b.check_in = ?
@@ -162,21 +162,23 @@ router.post('/auto-generate', (req, res) => {
   // 退房收入
   for (const b of checkouts) {
     const nights = Math.max(1, Math.ceil((new Date(b.check_out) - new Date(b.check_in)) / 86400000))
-    const amount = b.booking_amount > 0 ? b.booking_amount : b.price * nights
+    const ppn = b.price_per_night > 0 ? b.price_per_night : b.price
+    const amount = ppn * nights
     runSql(`
       INSERT INTO revenue_details (report_date, time, room_no, price, channel_type, channel_source, amount, payment_method)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [d, '退房', b.room_no, b.price, b.channel || '散客', `${b.guest_name}(退房)`, amount, '结账'])
+    `, [d, '退房', b.room_no, ppn, b.channel || '散客', `${b.guest_name}(退房)`, amount, '结账'])
   }
 
   // 新入住收入
   for (const b of checkins) {
     const nights = Math.max(1, Math.ceil((new Date(b.check_out) - new Date(b.check_in)) / 86400000))
-    const amount = b.price * nights
+    const ppn = b.price_per_night > 0 ? b.price_per_night : b.price
+    const amount = ppn * nights
     runSql(`
       INSERT INTO revenue_details (report_date, time, room_no, price, channel_type, channel_source, amount, payment_method)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [d, '入住', b.room_no, b.price, b.channel || '散客', `${b.guest_name}(入住)`, amount, '未付'])
+    `, [d, '入住', b.room_no, ppn, b.channel || '散客', `${b.guest_name}(入住)`, amount, '未付'])
   }
 
   // 返回完整的 revenue_details 记录

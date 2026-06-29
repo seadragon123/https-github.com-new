@@ -52,6 +52,7 @@ export default {
   updateBooking(id, data) { return request(`/bookings/${id}`, { method: 'PUT', body: JSON.stringify(data) }) },
   checkoutBooking(id, data) { return request(`/bookings/${id}/checkout`, { method: 'POST', body: JSON.stringify(data) }) },
   cancelBooking(id) { return request(`/bookings/${id}/cancel`, { method: 'PATCH' }) },
+  directCheckin(id, data) { return request(`/bookings/${id}/direct-checkin`, { method: 'POST', body: JSON.stringify(data) }) },
   updateBookingStatus(id, status) { return request(`/bookings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }) },
   getBookingGuests() { return request('/bookings/guests/list') },
 

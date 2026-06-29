@@ -165,8 +165,8 @@ const nights = computed(() => {
 
 const roomTotal = computed(() => {
   if (!booking.value) return 0
-  const base = (booking.value.room_price || booking.value.amount || 0)
-  return nights.value > 1 ? base : Math.max(base, booking.value.amount || 0)
+  const ppn = Number(booking.value.price_per_night) || Number(booking.value.room_price) || 0
+  return ppn * nights.value
 })
 
 const cateringTotal = computed(() => cateringOrders.value.reduce((s, o) => s + (o.total || 0), 0))

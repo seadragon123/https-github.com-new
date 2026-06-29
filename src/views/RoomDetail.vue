@@ -36,6 +36,11 @@
                 <div class="detail-label">房型</div>
                 <div class="detail-value">{{ room.room_type }}</div>
               </div>
+              <div class="detail-item">
+                <div class="detail-label">房价</div>
+                <div class="detail-value price-text" v-if="room.price">¥{{ Number(room.price).toFixed(0) }}<span class="text-sm text-muted">/晚</span></div>
+                <div class="detail-value text-muted" v-else>未设置</div>
+              </div>
               <div class="detail-item" style="grid-column: span 2;">
                 <div class="detail-label">状态</div>
                 <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
@@ -65,6 +70,10 @@
                   <option>豪华套房</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label>房价 (元/晚)</label>
+                <input v-model.number="editForm.price" type="number" min="0" class="form-input" placeholder="如 288" />
+              </div>
               <div class="form-group" style="grid-column: span 2;">
                 <label>备注描述</label>
                 <input v-model="editForm.description" class="form-input" placeholder="选填" />
@@ -82,6 +91,10 @@
         <template v-if="!editing">
           <div class="card-footer flex-between" v-if="room.status === '已入住'">
             <button class="btn btn-success" @click="$router.push(`/checkout/${currentBooking.id}`)">退房结账</button>
+          </div>
+          <div class="card-footer flex-between" v-if="room.status === '已预订'">
+            <button class="btn btn-primary" @click="directCheckin">直接入住</button>
+            <button class="btn btn-outline" @click="cancelReserve">🗑️ 取消预订</button>
           </div>
           <div class="card-footer" v-if="room.status === '空房'">
             <button class="btn btn-primary btn-block" @click="showCheckinModal = true">办理入住</button>
@@ -176,9 +189,26 @@
             <input v-model="form.check_out" type="date" class="form-input" />
           </div>
         </div>
+        <div class="flex-between gap-4">
+          <div class="form-group" style="flex:1">
+            <label>房价 (元/晚)</label>
+            <input v-model.number="form.price_per_night" type="number" min="0" class="form-input" :placeholder="String(room.price || 0)" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>订单金额</label>
+            <div class="form-amount-readonly">¥{{ computedAmount }}</div>
+          </div>
+        </div>
+        <div class="flex-between gap-4">
+          <div class="form-group" style="flex:1">
+            <label>押金 (¥)</label>
+            <input v-model.number="form.deposit" type="number" class="form-input" placeholder="0" />
+          </div>
+        </div>
         <div class="flex-between mt-8 gap-4">
           <button class="btn btn-outline btn-block" @click="showCheckinModal = false">取消</button>
           <button class="btn btn-primary btn-block" @click="doCheckin">确认入住</button>
+          <button class="btn btn-sm btn-outline" style="border-color:var(--primary);color:var(--primary);font-size:12px" @click="doReserve">📅 仅预订</button>
         </div>
       </div>
     </div>
@@ -186,7 +216,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api/index.js'
 import { showToast, showFailToast, showConfirmDialog } from 'vant'
@@ -201,7 +231,17 @@ const history = ref([])
 const editing = ref(false)
 const editForm = ref({})
 const showCheckinModal = ref(false)
-const form = ref({ guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '' })
+const _checkinBookingId = ref(null)
+const form = ref({ guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '', price_per_night: 0, deposit: 0 })
+
+const computedAmount = computed(() => {
+  const ppn = Number(form.value.price_per_night) || 0
+  if (!form.value.check_in || !form.value.check_out) return 0
+  const start = new Date(form.value.check_in)
+  const end = new Date(form.value.check_out)
+  const nights = Math.max(1, Math.ceil((end - start) / 86400000))
+  return ppn * nights
+})
 
 function addGuest() {
   form.value.guests.push({ name: '', id_card: '', phone: '', gender: '' })
@@ -223,7 +263,8 @@ const loadRoom = async () => {
   history.value = data.history
   const today = new Date().toISOString().slice(0, 10)
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-  form.value = { guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: today, check_out: tomorrow }
+  form.value = { guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: today, check_out: tomorrow, price_per_night: room.value.price || 0, deposit: 0 }
+  _checkinBookingId.value = null
 }
 
 // 编辑功能
@@ -243,7 +284,8 @@ function startEdit() {
     room_no: room.value.room_no,
     floor: room.value.floor,
     room_type: room.value.room_type,
-    description: room.value.description || ''
+    description: room.value.description || '',
+    price: room.value.price || 0
   }
   editing.value = true
 }
@@ -278,8 +320,25 @@ async function saveRoom() {
 const doCheckin = async () => {
   const validGuests = form.value.guests.filter(g => g.name?.trim())
   if (validGuests.length === 0) { showToast('请至少填写一位客人姓名'); return }
-  await api.createBooking({ ...form.value, guests: validGuests, room_id: room.value.id })
+  if (_checkinBookingId.value) {
+    // 预订 → 直接入住（更新客人信息）
+    await api.directCheckin(_checkinBookingId.value, { guests: validGuests, price_per_night: form.value.price_per_night, deposit: form.value.deposit })
+    _checkinBookingId.value = null
+  } else {
+    // 空房 → 新建入住
+    await api.createBooking({ ...form.value, price_per_night: form.value.price_per_night, guests: validGuests, room_id: room.value.id })
+  }
   showCheckinModal.value = false
+  showToast('✅ 入住成功')
+  loadRoom()
+}
+
+const doReserve = async () => {
+  const validGuests = form.value.guests.filter(g => g.name?.trim())
+  if (validGuests.length === 0) { showToast('请至少填写一位客人姓名'); return }
+  const result = await api.createBooking({ ...form.value, price_per_night: form.value.price_per_night, guests: validGuests, room_id: room.value.id, _is_reserve: true })
+  showCheckinModal.value = false
+  showToast('预订成功！已占用房号')
   loadRoom()
 }
 
@@ -293,6 +352,35 @@ const markClean = async () => {
   loadRoom()
 }
 
+// 已预订操作
+const directCheckin = async () => {
+  // 查找当前房间的已预订订单
+  const all = await api.getBookings('已预订')
+  const booking = all.find(b => b.room_id === room.value.id)
+  if (!booking) { showToast('未找到预订订单'); return }
+  // 预填表单
+  const today = new Date().toISOString().slice(0, 10)
+  form.value = {
+    guests: [{ name: booking.guest_name || '', id_card: '', phone: booking.guest_phone || '', gender: '' }],
+    check_in: booking.check_in,
+    check_out: booking.check_out,
+    price_per_night: booking.price_per_night || room.value.price || 0,
+    amount: booking.amount || 0,
+    deposit: booking.deposit || 0
+  }
+  _checkinBookingId.value = booking.id
+  showCheckinModal.value = true
+}
+
+const cancelReserve = async () => {
+  if (!await showConfirm('确定取消此房间的预订吗？房间将恢复空房状态。')) return
+  const all = await api.getBookings('已预订')
+  const booking = all.find(b => b.room_id === room.value.id)
+  if (!booking) { showToast('未找到预订订单'); return }
+  await api.cancelBooking(booking.id)
+  showToast('已取消预订')
+  loadRoom()
+}
 
 onMounted(loadRoom)
 </script>
@@ -302,6 +390,7 @@ onMounted(loadRoom)
 .detail-item {}
 .detail-label { font-size: 12px; color: var(--gray-500); margin-bottom: 2px; }
 .detail-value { font-size: 15px; font-weight: 500; }
+.price-text { font-size: 17px; font-weight: 700; color: var(--danger, #e74c3c); }
 .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .desc-box { font-size: 13px; color: var(--gray-700); background: var(--gray-50); padding: 10px; border-radius: 6px; margin-top: 10px; }
 .btn-danger { background: var(--danger); color: #fff; }
@@ -331,4 +420,6 @@ onMounted(loadRoom)
 .guest-info-meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
 .form-row { display: flex; gap: 10px; }
 .mb-8 { margin-bottom: 8px; }
+.form-amount-readonly { font-size: 16px; font-weight: 700; color: var(--danger, #e74c3c); padding: 6px 0; }
+.input-hint { font-size: 11px; color: var(--gray-500); margin-bottom: 2px; font-style: italic; }
 </style>

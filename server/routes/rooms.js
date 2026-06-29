@@ -52,26 +52,26 @@ router.patch('/:id', (req, res) => {
 
 // 更新房间信息
 router.put('/:id', (req, res) => {
-  const { room_no, floor, room_type, description } = req.body
+  const { room_no, floor, room_type, description, price } = req.body
   const room = queryOne(`SELECT * FROM rooms WHERE id = ?`, [req.params.id])
   if (!room) return res.status(404).json({ error: '房间不存在' })
   runSql(
-    `UPDATE rooms SET room_no=?, floor=?, room_type=?, description=?, updated_at=datetime('now','localtime') WHERE id=?`,
-    [room_no || room.room_no, floor ?? room.floor, room_type || room.room_type, description ?? room.description, req.params.id]
+    `UPDATE rooms SET room_no=?, floor=?, room_type=?, description=?, price=?, updated_at=datetime('now','localtime') WHERE id=?`,
+    [room_no || room.room_no, floor ?? room.floor, room_type || room.room_type, description ?? room.description, price ?? room.price, req.params.id]
   )
   res.json({ success: true })
 })
 
 // 新增房间
 router.post('/', (req, res) => {
-  const { room_no, floor, room_type, description } = req.body
+  const { room_no, floor, room_type, description, price } = req.body
   if (!room_no) return res.status(400).json({ error: '房号不能为空' })
   // 检查重复
   const existing = queryOne(`SELECT id FROM rooms WHERE room_no = ?`, [room_no])
   if (existing) return res.status(409).json({ error: `房号 ${room_no} 已存在` })
   const id = insertAndGetId(
-    `INSERT INTO rooms (room_no, floor, room_type, status, description) VALUES (?, ?, ?, '空房', ?)`,
-    [room_no, floor || 1, room_type || '标准大床房', description || '']
+    `INSERT INTO rooms (room_no, floor, room_type, status, description, price) VALUES (?, ?, ?, '空房', ?, ?)`,
+    [room_no, floor || 1, room_type || '标准大床房', description || '', price || 0]
   )
   res.json({ id, success: true })
 })

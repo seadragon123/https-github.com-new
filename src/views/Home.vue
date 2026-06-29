@@ -216,8 +216,14 @@
           </div>
         </div>
         <div class="form-group">
-          <label>房价 (¥)</label>
-          <input v-model="checkinForm.amount" type="number" class="form-input" placeholder="0" />
+          <label>房价 (元/晚)</label>
+          <input v-model.number="checkinForm.price_per_night" type="number" min="0" class="form-input" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label>订单金额</label>
+          <div class="form-amount-readonly" style="padding:8px 12px;font-size:16px;font-weight:700;color:var(--danger,#e74c3c)">
+            ¥{{ checkinAmount }}
+          </div>
         </div>
         <div class="form-group">
           <label>押金 (¥)</label>
@@ -340,8 +346,17 @@ const formatTime = (t) => t ? t.slice(11, 16) : ''
 
 // 入住操作
 const showCheckin = ref(false)
-const checkinForm = ref({ room_id: '', guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '', amount: 0, deposit: 0 })
+const checkinForm = ref({ room_id: '', guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '', price_per_night: 0, deposit: 0 })
 const availableRooms = ref([])
+
+const checkinAmount = computed(() => {
+  const ppn = Number(checkinForm.value.price_per_night) || 0
+  if (!checkinForm.value.check_in || !checkinForm.value.check_out) return 0
+  const start = new Date(checkinForm.value.check_in)
+  const end = new Date(checkinForm.value.check_out)
+  const nights = Math.max(1, Math.ceil((end - start) / 86400000))
+  return ppn * nights
+})
 
 function addGuest() {
   checkinForm.value.guests.push({ name: '', id_card: '', phone: '', gender: '' })
@@ -354,7 +369,7 @@ watch(showCheckin, async (v) => {
   if (v) {
     const today = new Date().toISOString().slice(0, 10)
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-    checkinForm.value = { room_id: '', guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: today, check_out: tomorrow, amount: 0, deposit: 0 }
+    checkinForm.value = { room_id: '', guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: today, check_out: tomorrow, price_per_night: 0, deposit: 0 }
     availableRooms.value = await api.getAvailableRooms()
   }
 })
@@ -383,7 +398,7 @@ const quickCheckin = (room) => {
     guests: [{ name: '', id_card: '', phone: '', gender: '' }],
     check_in: today,
     check_out: tomorrow,
-    amount: room.price || 0,
+    price_per_night: room.price || 0,
     deposit: 0
   }
   showCheckin.value = true
@@ -399,10 +414,8 @@ const doReserve = async () => {
     showToast('请至少填写一位客人姓名')
     return
   }
-  // 先创建入住订单
-  const result = await api.createBooking({ ...checkinForm.value, guests: validGuests })
-  // 更新为预订状态（不到店，房间标记已预订）
-  await api.updateBookingStatus(result.id, '已预订')
+  // 创建预订订单（不到店，房间标记已预订）
+  await api.createBooking({ ...checkinForm.value, guests: validGuests, _is_reserve: true })
   showCheckin.value = false
   showToast('预订成功！已占用房号')
   loadData()

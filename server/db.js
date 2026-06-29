@@ -88,11 +88,13 @@ function initSchema() {
   `)
   // 兼容旧数据库字段
   try { db.run("ALTER TABLE bookings ADD COLUMN channel TEXT DEFAULT '散客'") } catch(e) {}
+  try { db.run("ALTER TABLE bookings ADD COLUMN price_per_night REAL DEFAULT 0") } catch(e) {}
   try { db.run("ALTER TABLE bookings ADD COLUMN payment_method TEXT DEFAULT '现金'") } catch(e) {}
   try { db.run("ALTER TABLE bookings ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE revenue_details ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE incense_revenue ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE expenses ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
+  try { db.run("ALTER TABLE rooms ADD COLUMN price REAL NOT NULL DEFAULT 0") } catch(e) {}
   try { db.run("ALTER TABLE expenses ADD COLUMN receipt_image TEXT DEFAULT ''") } catch(e) {}
 
   db.run(`

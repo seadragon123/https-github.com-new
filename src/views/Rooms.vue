@@ -40,6 +40,10 @@
             <span v-if="room.current_guest" class="guest-name">{{ room.current_guest }}</span>
             <span v-else class="text-muted text-sm">空闲</span>
           </div>
+          <div class="room-price mt-4" v-if="room.price">
+            <span>💰 ¥{{ Number(room.price).toFixed(0) }}</span>
+            <span class="text-muted text-sm">/晚</span>
+          </div>
           <div v-if="room.status === '维修中' && room.description" class="room-desc">
             ⚠️ {{ room.description }}
           </div>
@@ -60,6 +64,7 @@
             <option>豪华大床房</option><option>豪华双床房</option><option>豪华套房</option>
           </select>
         </div>
+        <div class="form-group"><label>房价 (元/晚)</label><input v-model.number="form.price" type="number" class="form-input" placeholder="如 288" /></div>
         <div class="form-group"><label>备注</label><input v-model="form.description" class="form-input" placeholder="选填" /></div>
         <div class="flex-between mt-8 gap-4">
           <button class="btn btn-outline btn-block" @click="showAdd = false">取消</button>
@@ -80,7 +85,7 @@ const route = useRoute()
 const rooms = ref([])
 const activeTab = ref('')
 const showAdd = ref(false)
-const form = ref({ room_no: '', floor: 1, room_type: '标准大床房', description: '' })
+const form = ref({ room_no: '', floor: 1, room_type: '标准大床房', description: '', price: 0 })
 
 const filteredRooms = computed(() => {
   if (!activeTab.value) return rooms.value
@@ -107,7 +112,7 @@ async function doAdd() {
   try {
     const r = await api.addRoom(form.value)
     showAdd.value = false
-    form.value = { room_no: '', floor: 1, room_type: '标准大床房', description: '' }
+    form.value = { room_no: '', floor: 1, room_type: '标准大床房', description: '', price: 0 }
     rooms.value = await api.getRooms()
   } catch (err) {
     showFailToast(err.message)
@@ -140,5 +145,6 @@ onMounted(async () => {
 .room-no { font-size: 18px; font-weight: 700; }
 .room-detail { font-size: 12px; color: var(--gray-500); }
 .guest-name { font-size: 14px; font-weight: 500; }
+.room-price { font-size: 15px; font-weight: 600; color: var(--danger, #e74c3c); }
 .room-desc { font-size: 12px; color: var(--danger); background: #fce8e6; padding: 6px 10px; border-radius: 6px; margin-top: 8px; }
 </style>
