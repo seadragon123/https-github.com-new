@@ -36,10 +36,6 @@
                 <div class="detail-label">房型</div>
                 <div class="detail-value">{{ room.room_type }}</div>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">价格</div>
-                <div class="detail-value">¥{{ room.price }}/晚</div>
-              </div>
               <div class="detail-item" style="grid-column: span 2;">
                 <div class="detail-label">状态</div>
                 <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
@@ -68,10 +64,6 @@
                   <option>豪华双床房</option>
                   <option>豪华套房</option>
                 </select>
-              </div>
-              <div class="form-group">
-                <label>价格 (¥/晚)</label>
-                <input v-model.number="editForm.price" type="number" class="form-input" />
               </div>
               <div class="form-group" style="grid-column: span 2;">
                 <label>备注描述</label>
@@ -105,15 +97,15 @@
 
       <!-- 当前入住 -->
       <div v-if="currentBooking && !editing" class="card">
-        <div class="card-header">👤 当前客人</div>
+        <div class="card-header">👥 入住客人（{{ bookingGuests.length || 1 }} 位）</div>
         <div class="card-body">
-          <div class="detail-item">
-            <div class="detail-label">姓名</div>
-            <div class="detail-value">{{ currentBooking.guest_name }}</div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">电话</div>
-            <div class="detail-value">{{ currentBooking.guest_phone || '未填写' }}</div>
+          <div v-for="(g, i) in (bookingGuests.length > 0 ? bookingGuests : [{ name: currentBooking.guest_name, phone: currentBooking.guest_phone }])" :key="i" class="guest-info-item">
+            <div class="guest-info-main">{{ g.name }}</div>
+            <div class="guest-info-meta">
+              <span v-if="g.phone">{{ g.phone }}</span>
+              <span v-if="g.id_card">· {{ g.id_card }}</span>
+              <span v-if="g.gender">· {{ g.gender }}</span>
+            </div>
           </div>
           <div class="flex-between mt-8">
             <span class="text-sm text-muted">{{ currentBooking.check_in }} 入住</span>
@@ -138,25 +130,42 @@
 
     <!-- 入住 Modal -->
     <div v-if="showCheckinModal" class="modal-overlay" @click.self="showCheckinModal = false">
-      <div class="modal-content">
+      <div class="modal-content" style="max-width:420px">
         <div class="modal-title">🛎️ {{ room.room_no }} 入住登记</div>
-        <div class="form-group">
-          <label>客人姓名</label>
-          <div class="guest-search-wrap">
-            <input v-model="form.guest_name" class="form-input" placeholder="输入姓名或手机号搜索" @input="searchGuests" @focus="searchGuests" @blur="hideGuestResults" />
-            <div v-if="showGuestResults && guestResults.length > 0" class="guest-results">
-              <div v-for="g in guestResults" :key="g.id" class="guest-result-item" @mousedown.prevent="selectGuest(g)">
-                <span class="gr-name">{{ g.name }}</span>
-                <span class="gr-phone" v-if="g.phone">{{ g.phone }}</span>
-                <span class="gr-vip" v-if="g.vip_level > 0">VIP{{ g.vip_level }}</span>
+
+        <!-- 客人列表 -->
+        <div v-for="(g, i) in form.guests" :key="i" class="guest-card">
+          <div class="guest-card-header">
+            <span class="guest-card-num">👤 客人 {{ i + 1 }}</span>
+            <button v-if="form.guests.length > 1" class="btn btn-sm btn-danger" @click="removeGuest(i)">✕</button>
+          </div>
+          <div class="guest-card-body">
+            <div class="form-group">
+              <label>姓名 *</label>
+              <input v-model="g.name" class="form-input" placeholder="输入姓名" />
+            </div>
+            <div class="form-group">
+              <label>身份证号</label>
+              <input v-model="g.id_card" class="form-input" placeholder="选填" />
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>联系电话</label>
+                <input v-model="g.phone" class="form-input" placeholder="选填" />
+              </div>
+              <div class="form-group" style="flex:0 0 90px">
+                <label>性别</label>
+                <select v-model="g.gender" class="form-input form-select">
+                  <option value="">—</option>
+                  <option value="男">男</option>
+                  <option value="女">女</option>
+                </select>
               </div>
             </div>
           </div>
         </div>
-        <div class="form-group">
-          <label>联系电话</label>
-          <input v-model="form.guest_phone" class="form-input" placeholder="选填" />
-        </div>
+        <button class="btn btn-sm btn-outline btn-block mb-8" @click="addGuest">➕ 添加客人</button>
+
         <div class="flex-between gap-4">
           <div class="form-group" style="flex:1">
             <label>入住日期</label>
@@ -187,32 +196,18 @@ const router = useRouter()
 
 const room = ref({})
 const currentBooking = ref(null)
+const bookingGuests = ref([])
 const history = ref([])
 const editing = ref(false)
 const editForm = ref({})
 const showCheckinModal = ref(false)
-const form = ref({ guest_name: '', guest_phone: '', check_in: '', check_out: '' })
-const guestResults = ref([])
-const showGuestResults = ref(false)
-let guestListCache = []
+const form = ref({ guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: '', check_out: '' })
 
-async function searchGuests() {
-  const q = form.value.guest_name?.trim() || ''
-  if (q.length < 1) { guestResults.value = []; showGuestResults.value = false; return }
-  if (guestListCache.length === 0) {
-    try { guestListCache = await api.getGuests() } catch { return }
-  }
-  const lower = q.toLowerCase()
-  guestResults.value = guestListCache.filter(g =>
-    g.name.toLowerCase().includes(lower) || (g.phone && g.phone.includes(q))
-  ).slice(0, 8)
-  showGuestResults.value = guestResults.value.length > 0
+function addGuest() {
+  form.value.guests.push({ name: '', id_card: '', phone: '', gender: '' })
 }
-function hideGuestResults() { setTimeout(() => { showGuestResults.value = false }, 200) }
-function selectGuest(g) {
-  form.value.guest_name = g.name
-  form.value.guest_phone = g.phone || ''
-  showGuestResults.value = false
+function removeGuest(i) {
+  form.value.guests.splice(i, 1)
 }
 
 const statusBadge = (s) => {
@@ -224,10 +219,11 @@ const loadRoom = async () => {
   const data = await api.getRoom(route.params.id)
   room.value = data.room
   currentBooking.value = data.currentBooking
+  bookingGuests.value = data.bookingGuests || []
   history.value = data.history
   const today = new Date().toISOString().slice(0, 10)
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-  form.value = { guest_name: '', guest_phone: '', check_in: today, check_out: tomorrow }
+  form.value = { guests: [{ name: '', id_card: '', phone: '', gender: '' }], check_in: today, check_out: tomorrow }
 }
 
 // 编辑功能
@@ -247,7 +243,6 @@ function startEdit() {
     room_no: room.value.room_no,
     floor: room.value.floor,
     room_type: room.value.room_type,
-    price: room.value.price,
     description: room.value.description || ''
   }
   editing.value = true
@@ -281,8 +276,9 @@ async function saveRoom() {
 
 // 状态操作
 const doCheckin = async () => {
-  if (!form.value.guest_name) { showToast('请填写客人姓名'); return }
-  await api.createBooking({ ...form.value, room_id: room.value.id })
+  const validGuests = form.value.guests.filter(g => g.name?.trim())
+  if (validGuests.length === 0) { showToast('请至少填写一位客人姓名'); return }
+  await api.createBooking({ ...form.value, guests: validGuests, room_id: room.value.id })
   showCheckinModal.value = false
   loadRoom()
 }
@@ -323,4 +319,16 @@ onMounted(loadRoom)
 .gr-name { font-weight: 500; }
 .gr-phone { font-size: 12px; color: var(--gray-500); }
 .gr-vip { font-size: 10px; color: var(--warning); font-weight: 600; margin-left: auto; }
+
+/* 多客人卡片 */
+.guest-card { background: var(--gray-50); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
+.guest-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.guest-card-num { font-weight: 600; font-size: 13px; }
+.guest-card-body { display: flex; flex-direction: column; gap: 8px; }
+.guest-info-item { padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
+.guest-info-item:last-child { border-bottom: none; }
+.guest-info-main { font-size: 14px; font-weight: 500; }
+.guest-info-meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+.form-row { display: flex; gap: 10px; }
+.mb-8 { margin-bottom: 8px; }
 </style>

@@ -310,4 +310,21 @@ function initSchema() {
       created_at TEXT DEFAULT (datetime('now','localtime'))
     )
   `)
+
+  // 入住客人明细（支持多位客人）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS booking_guests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      booking_id INTEGER NOT NULL REFERENCES bookings(id),
+      guest_id INTEGER REFERENCES guests(id),
+      name TEXT NOT NULL,
+      id_card TEXT DEFAULT '',
+      phone TEXT DEFAULT '',
+      gender TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `)
+
+  // 客人表补充字段
+  try { db.run("ALTER TABLE guests ADD COLUMN gender TEXT DEFAULT ''") } catch(e) {}
 }

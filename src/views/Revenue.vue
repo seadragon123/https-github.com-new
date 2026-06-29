@@ -221,7 +221,7 @@
               </tr>
               <tr class="summary-row net-row">
                 <td><strong>当日净现金流</strong></td>
-                <td><strong :class="netClass">¥{{ summary.daily.netCashflow }}</strong></td>
+                <td><strong :class="netClass">¥{{ summary.daily.netCashflow.toFixed(2) }}</strong></td>
                 <td class="text-sm text-muted">= 总收入 - 总支出</td>
               </tr>
               <tr><td colspan="3" class="sep-line"></td></tr>
@@ -237,7 +237,7 @@
               </tr>
               <tr class="summary-row net-row">
                 <td><strong>本月累计结余</strong></td>
-                <td><strong :class="monthNetClass">¥{{ summary.monthly.netBalance }}</strong></td>
+                <td><strong :class="monthNetClass">¥{{ summary.monthly.netBalance.toFixed(2) }}</strong></td>
                 <td class="text-sm text-muted">= 累计收入 - 累计支出</td>
               </tr>
             </tbody>
@@ -529,10 +529,10 @@ function printReport() {
     <tr><th>项目</th><th>金额(元)</th></tr>
     <tr><td>当日总收入</td><td>¥${summary.value.daily.totalRevenue}</td></tr>
     <tr><td>当日总支出</td><td>¥${summary.value.daily.totalExpense}</td></tr>
-    <tr><td><strong>当日净现金流</strong></td><td><strong>¥${summary.value.daily.netCashflow}</strong></td></tr>
+    <tr><td><strong>当日净现金流</strong></td><td><strong>¥${summary.value.daily.netCashflow.toFixed(2)}</strong></td></tr>
     <tr><td>本月累计收入</td><td>¥${summary.value.monthly.totalRevenue}</td></tr>
     <tr><td>本月累计支出</td><td>¥${summary.value.monthly.totalExpense}</td></tr>
-    <tr><td><strong>本月累计结余</strong></td><td><strong>¥${summary.value.monthly.netBalance}</strong></td></tr>
+    <tr><td><strong>本月累计结余</strong></td><td><strong>¥${summary.value.monthly.netBalance.toFixed(2)}</strong></td></tr>
   </table>
   <div class="report-footer">报告人: ${reporter.value || '___________'}  |  ${reportDate.value}</div>
   </body></html>`
@@ -580,10 +580,10 @@ function exportCSV() {
   csv += `经营汇总\n项目,金额\n`
   csv += `当日总收入,¥${summary.value.daily.totalRevenue}\n`
   csv += `当日总支出,¥${summary.value.daily.totalExpense}\n`
-  csv += `当日净现金流,¥${summary.value.daily.netCashflow}\n`
+  csv += `当日净现金流,¥${summary.value.daily.netCashflow.toFixed(2)}\n`
   csv += `本月累计收入,¥${summary.value.monthly.totalRevenue}\n`
   csv += `本月累计支出,¥${summary.value.monthly.totalExpense}\n`
-  csv += `本月累计结余,¥${summary.value.monthly.netBalance}\n`
+  csv += `本月累计结余,¥${summary.value.monthly.netBalance.toFixed(2)}\n`
   csv += `报告人,${reporter.value || ''}\n`
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })

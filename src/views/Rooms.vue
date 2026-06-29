@@ -36,12 +36,9 @@
               <button class="btn-del-icon" @click.stop="deleteRoom(room)">✕</button>
             </div>
           </div>
-          <div class="room-meta flex-between mt-8">
-            <div>
-              <span v-if="room.current_guest" class="guest-name">{{ room.current_guest }}</span>
-              <span v-else class="text-muted text-sm">空闲</span>
-            </div>
-            <span class="text-sm text-muted">¥{{ room.price }}/晚</span>
+          <div class="room-meta mt-8">
+            <span v-if="room.current_guest" class="guest-name">{{ room.current_guest }}</span>
+            <span v-else class="text-muted text-sm">空闲</span>
           </div>
           <div v-if="room.status === '维修中' && room.description" class="room-desc">
             ⚠️ {{ room.description }}
@@ -63,7 +60,6 @@
             <option>豪华大床房</option><option>豪华双床房</option><option>豪华套房</option>
           </select>
         </div>
-        <div class="form-group"><label>价格 (¥/晚)</label><input v-model.number="form.price" type="number" class="form-input" placeholder="0" /></div>
         <div class="form-group"><label>备注</label><input v-model="form.description" class="form-input" placeholder="选填" /></div>
         <div class="flex-between mt-8 gap-4">
           <button class="btn btn-outline btn-block" @click="showAdd = false">取消</button>
@@ -84,7 +80,7 @@ const route = useRoute()
 const rooms = ref([])
 const activeTab = ref('')
 const showAdd = ref(false)
-const form = ref({ room_no: '', floor: 1, room_type: '标准大床房', price: 0, description: '' })
+const form = ref({ room_no: '', floor: 1, room_type: '标准大床房', description: '' })
 
 const filteredRooms = computed(() => {
   if (!activeTab.value) return rooms.value
@@ -111,7 +107,7 @@ async function doAdd() {
   try {
     const r = await api.addRoom(form.value)
     showAdd.value = false
-    form.value = { room_no: '', floor: 1, room_type: '标准大床房', price: 0, description: '' }
+    form.value = { room_no: '', floor: 1, room_type: '标准大床房', description: '' }
     rooms.value = await api.getRooms()
   } catch (err) {
     showFailToast(err.message)

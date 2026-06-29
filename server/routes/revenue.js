@@ -40,7 +40,7 @@ router.get('/summary', (req, res) => {
   const totalExpense = expRows[0]?.total || 0
 
   const totalRevenue = roomRevenue + cateringRevenue + incenseRevenue
-  const netCashflow = totalRevenue - totalExpense
+  const netCashflow = Math.round((totalRevenue - totalExpense) * 100) / 100
 
   // 月度累计
   const mRoom = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = '已完成' AND date(updated_at) LIKE ?`, [m + '%'])
@@ -49,7 +49,7 @@ router.get('/summary', (req, res) => {
   const mExp = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE report_date LIKE ?`, [m + '%'])
   const monthlyRevenue = (mRoom[0]?.total || 0) + (mCat[0]?.total || 0) + (mInc[0]?.total || 0)
   const monthlyExpense = mExp[0]?.total || 0
-  const monthlyNet = monthlyRevenue - monthlyExpense
+  const monthlyNet = Math.round((monthlyRevenue - monthlyExpense) * 100) / 100
 
   // 写入日报表
   runSql(

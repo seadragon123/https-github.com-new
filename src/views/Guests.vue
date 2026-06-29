@@ -150,16 +150,26 @@ function openEdit(g) {
 
 async function doAdd() {
   if (!addForm.value.name.trim()) { showToast('姓名不能为空'); return }
-  await api.addGuest(addForm.value)
-  showAdd.value = false
-  addForm.value = { name: '', phone: '', id_card: '', gender: '未设置', vip_level: 0, notes: '' }
-  loadGuests()
+  try {
+    await api.addGuest(addForm.value)
+    showAdd.value = false
+    addForm.value = { name: '', phone: '', id_card: '', gender: '未设置', vip_level: 0, notes: '' }
+    showToast('✅ 保存成功')
+    loadGuests()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 async function doEdit() {
-  await api.updateGuest(editTarget.value.id, editForm.value)
-  editTarget.value = null
-  loadGuests()
+  try {
+    await api.updateGuest(editTarget.value.id, editForm.value)
+    editTarget.value = null
+    showToast('✅ 保存成功')
+    loadGuests()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 onMounted(loadGuests)

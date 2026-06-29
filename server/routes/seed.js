@@ -10,7 +10,7 @@ router.post('/', (req, res) => {
 
   const db = getDb()
 
-  // Clear all tables (order by dependency)
+  // Clear all tables (order by dependency) + reset auto-increment
   db.run('DELETE FROM incense_sales')
   db.run('DELETE FROM catering_orders')
   db.run('DELETE FROM deposit_records')
@@ -28,6 +28,8 @@ router.post('/', (req, res) => {
   db.run('DELETE FROM daily_reports')
   db.run('DELETE FROM price_calendar')
   db.run('DELETE FROM shift_reports')
+  // Reset auto-increment counters
+  db.run("DELETE FROM sqlite_sequence")
 
   // ─── Rooms (42 rooms) ───
   const roomData = [

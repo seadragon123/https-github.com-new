@@ -89,10 +89,7 @@ export default {
   cancelCateringOrder(id) { return request(`/catering/orders/${id}`, { method: 'DELETE' }) },
 
   // Incense
-  getIncenseProducts() { return request('/incense/products') },
-  addIncenseProduct(data) { return request('/incense/products', { method: 'POST', body: JSON.stringify(data) }) },
-  updateIncenseProduct(id, data) { return request(`/incense/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }) },
-  deleteIncenseProduct(id) { return request(`/incense/products/${id}`, { method: 'DELETE' }) },
+
   getIncenseSales(date) { return request(`/incense/sales?date=${date || ''}`) },
   addIncenseSale(data) { return request('/incense/sales', { method: 'POST', body: JSON.stringify(data) }) },
   deleteIncenseSale(id) { return request(`/incense/sales/${id}`, { method: 'DELETE' }) },

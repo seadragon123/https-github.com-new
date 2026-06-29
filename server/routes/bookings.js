@@ -24,34 +24,50 @@ router.get('/:id', (req, res) => {
     [req.params.id]
   )
   if (!booking) return res.status(404).json({ error: '订单不存在' })
-  res.json(booking)
+  // 返回入住客人明细
+  const guests = queryAll('SELECT * FROM booking_guests WHERE booking_id = ? ORDER BY id', [req.params.id])
+  res.json({ ...booking, guests })
 })
 
 // 新建订单（入住）
 router.post('/', (req, res) => {
-  const { room_id, guest_name, guest_phone, check_in, check_out, amount, deposit, notes, channel } = req.body
-  if (!room_id || !guest_name || !check_in || !check_out) {
-    return res.status(400).json({ error: '缺少必填字段' })
+  const { room_id, guests, check_in, check_out, amount, deposit, notes, channel } = req.body
+  if (!room_id || !guests || guests.length === 0 || !check_in || !check_out) {
+    return res.status(400).json({ error: '缺少必填字段（房间、客人信息、入住/退房日期）' })
   }
 
+  const primary = guests[0]
   const id = insertAndGetId(
     `INSERT INTO bookings (room_id, guest_name, guest_phone, channel, check_in, check_out, status, amount, deposit, notes)
      VALUES (?, ?, ?, ?, ?, ?, '已入住', ?, ?, ?)`,
-    [room_id, guest_name, guest_phone || '', channel || '散客', check_in, check_out, amount || 0, deposit || 0, notes || '']
+    [room_id, primary.name || '', primary.phone || '', channel || '散客', check_in, check_out, amount || 0, deposit || 0, notes || '']
   )
 
-  // 自动保存/更新客人信息
-  const existing = queryOne('SELECT id, vip_level FROM guests WHERE name = ? AND phone = ?', [guest_name, guest_phone || ''])
-  let guestId = existing?.id
-  if (existing) {
-    runSql('UPDATE guests SET vip_level = MIN(vip_level + 1, 2), notes = CASE WHEN ? != \'\' THEN ? ELSE notes END WHERE id = ?',
-      [notes || '', notes || '', existing.id])
-  } else {
-    guestId = insertAndGetId('INSERT INTO guests (name, phone, notes) VALUES (?, ?, ?)',
-      [guest_name, guest_phone || '', notes || ''])
+  // 为每位客人创建/更新客人记录 + 写入 booking_guests
+  for (const g of guests) {
+    if (!g.name) continue
+    let guestId = null
+    const existing = queryOne('SELECT id FROM guests WHERE name = ? AND phone = ?', [g.name, g.phone || ''])
+    if (existing) {
+      guestId = existing.id
+      runSql('UPDATE guests SET id_card=COALESCE(NULLIF(?,\'\'),id_card), gender=COALESCE(NULLIF(?,\'\'),gender) WHERE id=?',
+        [g.id_card || '', g.gender || '', existing.id])
+    } else {
+      guestId = insertAndGetId(
+        'INSERT INTO guests (name, phone, id_card, gender, notes) VALUES (?, ?, ?, ?, ?)',
+        [g.name, g.phone || '', g.id_card || '', g.gender || '', notes || '']
+      )
+    }
+    insertAndGetId(
+      'INSERT INTO booking_guests (booking_id, guest_id, name, id_card, phone, gender) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, guestId, g.name, g.id_card || '', g.phone || '', g.gender || '']
+    )
   }
-  if (guestId) {
-    runSql('UPDATE bookings SET guest_id = ? WHERE id = ?', [guestId, id])
+
+  // 第一位客人关联到订单（用于客人管理统计）
+  const firstGuestId = queryOne('SELECT guest_id FROM booking_guests WHERE booking_id = ? ORDER BY id LIMIT 1', [id])
+  if (firstGuestId?.guest_id) {
+    runSql('UPDATE bookings SET guest_id = ? WHERE id = ?', [firstGuestId.guest_id, id])
   }
 
   // 更新房间状态
