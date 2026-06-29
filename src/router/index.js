@@ -13,7 +13,6 @@ import Profile from '../views/Profile.vue'
 import Catering from '../views/Catering.vue'
 import Incense from '../views/Incense.vue'
 import Expenses from '../views/Expenses.vue'
-import PriceCalendar from '../views/PriceCalendar.vue'
 import ShiftReport from '../views/ShiftReport.vue'
 import Login from '../views/Login.vue'
 
@@ -29,7 +28,6 @@ const routes = [
   { path: '/catering', name: 'Catering', component: Catering, meta: { title: '餐厅', nav: true, icon: '🍜' } },
   { path: '/incense', name: 'Incense', component: Incense, meta: { title: '请香', nav: true, icon: '🪷' } },
   { path: '/expenses', name: 'Expenses', component: Expenses, meta: { title: '支出', nav: true, icon: '💸' } },
-  { path: '/price-calendar', name: 'PriceCalendar', component: PriceCalendar, meta: { title: '房价', nav: true, icon: '🗓️' } },
   { path: '/shift-report', name: 'ShiftReport', component: ShiftReport, meta: { title: '交班', nav: true, icon: '📋' } },
   { path: '/guests', name: 'Guests', component: Guests, meta: { title: '客人', nav: true, icon: '👤' } },
   { path: '/cleaning', name: 'Cleaning', component: Cleaning },
@@ -51,9 +49,9 @@ router.beforeEach((to, from, next) => {
   // 角色路由守卫
   const roleRoutes = {
     '管理员': ['/', '/rooms', '/bookings', '/checkout', '/guests', '/catering', '/incense', '/expenses',
-               '/revenue', '/price-calendar', '/shift-report', '/cleaning', '/maintenance', '/todos', '/profile'],
+               '/revenue', '/shift-report', '/cleaning', '/maintenance', '/todos', '/profile'],
     '前台': ['/', '/rooms', '/bookings', '/checkout', '/guests', '/incense', '/expenses',
-            '/price-calendar', '/shift-report', '/cleaning', '/maintenance', '/todos', '/profile'],
+            '/shift-report', '/cleaning', '/maintenance', '/todos', '/profile'],
     '餐厅': ['/catering', '/profile'],
     '财务': ['/revenue', '/expenses', '/shift-report', '/profile'],
   }

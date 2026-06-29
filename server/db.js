@@ -62,6 +62,7 @@ function initSchema() {
       name TEXT NOT NULL,
       phone TEXT DEFAULT '',
       id_card TEXT DEFAULT '',
+      gender TEXT DEFAULT '未设置' CHECK(gender IN ('男','女','未设置')),
       vip_level INTEGER DEFAULT 0,
       notes TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now','localtime'))
@@ -87,6 +88,7 @@ function initSchema() {
   `)
   // 兼容旧数据库字段
   try { db.run("ALTER TABLE bookings ADD COLUMN channel TEXT DEFAULT '散客'") } catch(e) {}
+  try { db.run("ALTER TABLE bookings ADD COLUMN payment_method TEXT DEFAULT '现金'") } catch(e) {}
   try { db.run("ALTER TABLE bookings ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE revenue_details ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE incense_revenue ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}

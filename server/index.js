@@ -29,7 +29,6 @@ import cateringRoutes from './routes/catering.js'
 import incenseRoutes from './routes/incense.js'
 import expenseRoutes from './routes/expenses.js'
 import depositRoutes from './routes/deposits.js'
-import priceCalendarRoutes from './routes/price-calendar.js'
 import shiftReportRoutes from './routes/shift-report.js'
 import authRoutes, { initAdminUser } from './routes/auth.js'
 import seedRoutes from './routes/seed.js'
@@ -45,7 +44,6 @@ app.use('/api/catering', cateringRoutes)
 app.use('/api/incense', incenseRoutes)
 app.use('/api/expenses', expenseRoutes)
 app.use('/api/deposits', depositRoutes)
-app.use('/api/price-calendar', priceCalendarRoutes)
 app.use('/api/shift-report', shiftReportRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/seed', seedRoutes)

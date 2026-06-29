@@ -15,6 +15,7 @@
           <div class="flex-between">
             <div class="flex-center">
               <span class="guest-name">{{ g.name }}</span>
+              <span v-if="g.gender && g.gender !== '未设置'" class="text-sm text-muted" style="margin-left:4px">{{ g.gender === '男' ? '♂' : '♀' }}</span>
               <span v-if="g.vip_level >= 2" class="badge badge-red">VIP</span>
               <span v-if="g.vip_level === 1" class="badge badge-orange">常客</span>
             </div>
@@ -39,6 +40,11 @@
         <div class="modal-title">👤 新增客人</div>
         <div class="form-group"><label>姓名 *</label><input v-model="addForm.name" class="form-input" /></div>
         <div class="form-group"><label>电话</label><input v-model="addForm.phone" class="form-input" /></div>
+        <div class="form-group"><label>性别</label>
+          <select v-model="addForm.gender" class="form-input form-select">
+            <option value="未设置">未设置</option><option value="男">男</option><option value="女">女</option>
+          </select>
+        </div>
         <div class="form-group"><label>身份证</label><input v-model="addForm.id_card" class="form-input" /></div>
         <div class="form-group"><label>等级</label>
           <select v-model.number="addForm.vip_level" class="form-input form-select">
@@ -59,6 +65,11 @@
         <div class="modal-title">✏️ 编辑 {{ editTarget.name }}</div>
         <div class="form-group"><label>姓名</label><input v-model="editForm.name" class="form-input" /></div>
         <div class="form-group"><label>电话</label><input v-model="editForm.phone" class="form-input" /></div>
+        <div class="form-group"><label>性别</label>
+          <select v-model="editForm.gender" class="form-input form-select">
+            <option value="未设置">未设置</option><option value="男">男</option><option value="女">女</option>
+          </select>
+        </div>
         <div class="form-group"><label>身份证</label><input v-model="editForm.id_card" class="form-input" /></div>
         <div class="form-group"><label>等级</label>
           <select v-model.number="editForm.vip_level" class="form-input form-select">
@@ -99,7 +110,7 @@ import { showToast, showFailToast, showConfirmDialog } from 'vant'
 const guests = ref([])
 const search = ref('')
 const showAdd = ref(false)
-const addForm = ref({ name: '', phone: '', id_card: '', vip_level: 0, notes: '' })
+const addForm = ref({ name: '', phone: '', id_card: '', gender: '未设置', vip_level: 0, notes: '' })
 const editTarget = ref(null)
 const editForm = ref({})
 const detailTarget = ref(null)
@@ -134,14 +145,14 @@ async function openDetail(g) {
 
 function openEdit(g) {
   editTarget.value = g
-  editForm.value = { name: g.name, phone: g.phone, id_card: g.id_card, vip_level: g.vip_level, notes: g.notes }
+  editForm.value = { name: g.name, phone: g.phone, id_card: g.id_card, gender: g.gender || '未设置', vip_level: g.vip_level, notes: g.notes }
 }
 
 async function doAdd() {
   if (!addForm.value.name.trim()) { showToast('姓名不能为空'); return }
   await api.addGuest(addForm.value)
   showAdd.value = false
-  addForm.value = { name: '', phone: '', id_card: '', vip_level: 0, notes: '' }
+  addForm.value = { name: '', phone: '', id_card: '', gender: '未设置', vip_level: 0, notes: '' }
   loadGuests()
 }
 

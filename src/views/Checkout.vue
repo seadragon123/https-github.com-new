@@ -111,6 +111,15 @@
           </div>
 
           <div class="form-group mt-8">
+            <label>支付方式</label>
+            <div class="radio-group" style="flex-direction:row">
+              <label class="radio-item"><input type="radio" v-model="paymentMethod" value="现金" /><span>现金</span></label>
+              <label class="radio-item"><input type="radio" v-model="paymentMethod" value="微信" /><span>微信</span></label>
+              <label class="radio-item"><input type="radio" v-model="paymentMethod" value="支付宝" /><span>支付宝</span></label>
+            </div>
+          </div>
+
+          <div class="form-group mt-8">
             <label>备注</label>
             <input v-model="notes" class="form-input" placeholder="选填" />
           </div>
@@ -140,6 +149,7 @@ const notes = ref('')
 const loading = ref(false)
 const depositHandling = ref('full_refund')
 const deductAmount = ref(0)
+const paymentMethod = ref('现金')
 
 // 挂账数据
 const cateringOrders = ref([])
@@ -195,6 +205,7 @@ const doCheckout = async () => {
   try {
     const payload = {
       final_amount: grandTotal.value,
+      payment_method: paymentMethod.value,
       notes: notes.value,
       deposit_handling: depositHandling.value
     }

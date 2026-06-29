@@ -34,23 +34,23 @@ router.get('/:id', (req, res) => {
 
 // 新增客人
 router.post('/', (req, res) => {
-  const { name, phone, id_card, vip_level, notes } = req.body
+  const { name, phone, id_card, gender, vip_level, notes } = req.body
   if (!name) return res.status(400).json({ error: '姓名不能为空' })
   const id = insertAndGetId(
-    `INSERT INTO guests (name, phone, id_card, vip_level, notes) VALUES (?, ?, ?, ?, ?)`,
-    [name, phone || '', id_card || '', vip_level || 0, notes || '']
+    `INSERT INTO guests (name, phone, id_card, gender, vip_level, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+    [name, phone || '', id_card || '', gender || '未设置', vip_level || 0, notes || '']
   )
   res.json({ id, success: true })
 })
 
 // 编辑客人
 router.put('/:id', (req, res) => {
-  const { name, phone, id_card, vip_level, notes } = req.body
+  const { name, phone, id_card, gender, vip_level, notes } = req.body
   const guest = queryOne(`SELECT * FROM guests WHERE id = ?`, [req.params.id])
   if (!guest) return res.status(404).json({ error: '客人不存在' })
   runSql(
-    `UPDATE guests SET name=?, phone=?, id_card=?, vip_level=?, notes=? WHERE id=?`,
-    [name ?? guest.name, phone ?? guest.phone, id_card ?? guest.id_card, vip_level ?? guest.vip_level, notes ?? guest.notes, req.params.id]
+    `UPDATE guests SET name=?, phone=?, id_card=?, gender=?, vip_level=?, notes=? WHERE id=?`,
+    [name ?? guest.name, phone ?? guest.phone, id_card ?? guest.id_card, gender ?? guest.gender, vip_level ?? guest.vip_level, notes ?? guest.notes, req.params.id]
   )
   res.json({ success: true })
 })

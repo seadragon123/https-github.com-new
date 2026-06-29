@@ -73,7 +73,7 @@ router.post('/:id/checkout', (req, res) => {
   const booking = queryOne('SELECT * FROM bookings WHERE id = ?', [req.params.id])
   if (!booking) return res.status(404).json({ error: '订单不存在' })
 
-  const { final_amount, deposit_handling, deposit_deduct_amount, notes } = req.body
+  const { final_amount, payment_method, deposit_handling, deposit_deduct_amount, notes } = req.body
 
   // 1. 计算挂账消费（餐饮+请香）
   const cateringOrders = queryAll(
@@ -139,8 +139,8 @@ router.post('/:id/checkout', (req, res) => {
 
   // 4. 更新订单状态
   runSql(
-    'UPDATE bookings SET status=\'已完成\', amount=?, notes=?, updated_at=datetime(\'now\',\'localtime\') WHERE id=?',
-    [final_amount || booking.amount, notes || booking.notes, req.params.id]
+    `UPDATE bookings SET status='已完成', amount=?, payment_method=?, notes=?, updated_at=datetime('now','localtime') WHERE id=?`,
+    [final_amount || booking.amount, payment_method || '现金', notes || booking.notes, req.params.id]
   )
   runSql('UPDATE rooms SET status=\'清洁中\', updated_at=datetime(\'now\',\'localtime\') WHERE id=?', [booking.room_id])
   runSql('INSERT INTO cleaning (room_id, status, scheduled_at) VALUES (?, \'待清洁\', datetime(\'now\',\'localtime\'))', [booking.room_id])
