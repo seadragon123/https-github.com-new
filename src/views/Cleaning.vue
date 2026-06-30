@@ -119,36 +119,56 @@ const openEdit = (c) => {
   editForm.value = { assigned_to: c.assigned_to, status: c.status }
 }
 
-const assignPerson = (c) => {
+const assignPerson = async (c) => {
   const name = prompt('指派给谁？', c.assigned_to || '')
   if (name === null) return
-  api.updateCleaning(c.id, { assigned_to: name })
-  loadAll()
+  try {
+    await api.updateCleaning(c.id, { assigned_to: name })
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const markDone = async (c) => {
-  await api.updateCleaning(c.id, { status: '已完成' })
-  loadAll()
+  try {
+    await api.updateCleaning(c.id, { status: '已完成' })
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const deleteItem = async (c) => {
   if (!await showConfirm('确定删除？')) return
-  await api.deleteCleaning(c.id)
-  loadAll()
+  try {
+    await api.deleteCleaning(c.id)
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const doAdd = async () => {
   if (!addForm.value.room_id) { showToast('请选择房间'); return }
-  await api.addCleaning(addForm.value)
-  showAdd.value = false
-  addForm.value = { room_id: '', assigned_to: '', scheduled_at: '' }
-  loadAll()
+  try {
+    await api.addCleaning(addForm.value)
+    showAdd.value = false
+    addForm.value = { room_id: '', assigned_to: '', scheduled_at: '' }
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const doEdit = async () => {
-  await api.updateCleaning(editTarget.value.id, editForm.value)
-  editTarget.value = null
-  loadAll()
+  try {
+    await api.updateCleaning(editTarget.value.id, editForm.value)
+    editTarget.value = null
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 

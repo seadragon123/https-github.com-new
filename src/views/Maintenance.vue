@@ -111,28 +111,44 @@ const openEdit = (m) => {
 }
 
 const markDone = async (m) => {
-  await api.updateMaintenance(m.id, { status: '已完成' })
-  loadAll()
+  try {
+    await api.updateMaintenance(m.id, { status: '已完成' })
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const deleteItem = async (m) => {
   if (!await showConfirm('确定删除？')) return
-  await api.deleteMaintenance(m.id)
-  loadAll()
+  try {
+    await api.deleteMaintenance(m.id)
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const doAdd = async () => {
   if (!addForm.value.room_id || !addForm.value.description.trim()) { showToast('请填写完整信息'); return }
-  await api.addMaintenance(addForm.value)
-  showAdd.value = false
-  addForm.value = { room_id: '', description: '' }
-  loadAll()
+  try {
+    await api.addMaintenance(addForm.value)
+    showAdd.value = false
+    addForm.value = { room_id: '', description: '' }
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const doEdit = async () => {
-  await api.updateMaintenance(editTarget.value.id, editForm.value)
-  editTarget.value = null
-  loadAll()
+  try {
+    await api.updateMaintenance(editTarget.value.id, editForm.value)
+    editTarget.value = null
+    loadAll()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 

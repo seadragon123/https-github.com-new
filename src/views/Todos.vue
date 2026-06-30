@@ -100,26 +100,32 @@ const loadTodos = async () => {
 }
 
 const toggleTodo = async (id) => {
-  await api.toggleTodo(id)
-  loadTodos()
+  try {
+    await api.toggleTodo(id)
+    loadTodos()
+  } catch (e) { showFailToast(e.message) }
 }
 
 const deleteTodo = async (id) => {
   if (!await showConfirm('确定删除？')) return
-  await api.deleteTodo(id)
-  loadTodos()
+  try {
+    await api.deleteTodo(id)
+    loadTodos()
+  } catch (e) { showFailToast(e.message) }
 }
 
 const addTodo = async () => {
   if (!newTodo.value.title.trim()) { showToast('请输入内容'); return }
-  await api.addTodo({
-    title: newTodo.value.title,
-    priority: parseInt(newTodo.value.priority),
-    due_time: newTodo.value.due_time
-  })
-  showAdd.value = false
-  newTodo.value = { title: '', priority: 0, due_time: '' }
-  loadTodos()
+  try {
+    await api.addTodo({
+      title: newTodo.value.title,
+      priority: parseInt(newTodo.value.priority),
+      due_time: newTodo.value.due_time
+    })
+    showAdd.value = false
+    newTodo.value = { title: '', priority: 0, due_time: '' }
+    loadTodos()
+  } catch (e) { showFailToast(e.message) }
 }
 
 onMounted(loadTodos)

@@ -448,7 +448,9 @@ async function autoExpenses() {
 
 function deleteRoomRow(i) {
   const item = roomItems.value[i]
-  if (item.id) api.deleteRevenueDetail(item.id)
+  if (item.id) {
+    api.deleteRevenueDetail(item.id).catch(e => showFailToast(e.message))
+  }
   roomItems.value.splice(i, 1)
   updateRoomTotal()
 }
@@ -465,7 +467,9 @@ function addIncenseRow() {
 
 function deleteIncenseRow(i) {
   const item = incenseItems.value[i]
-  if (item.id) api.deleteIncenseRevenue(item.id)
+  if (item.id) {
+    api.deleteIncenseRevenue(item.id).catch(e => showFailToast(e.message))
+  }
   incenseItems.value.splice(i, 1)
   updateIncenseTotal()
 }
@@ -495,7 +499,9 @@ function addExpenseRow() {
 }
 
 function deleteExpenseRow(id, i) {
-  if (id) api.deleteExpense(id)
+  if (id) {
+    api.deleteExpense(id).catch(e => showFailToast(e.message))
+  }
   allExpenses.value.splice(i, 1)
   updateExpenses()
 }

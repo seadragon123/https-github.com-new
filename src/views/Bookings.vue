@@ -211,17 +211,6 @@ const filtered = computed(() => {
   return list
 })
 
-const checkinBooking = async (b) => {
-  try {
-    await api.updateBookingStatus(b.id, '已入住')
-    await api.updateRoomStatus(b.room_id, '已入住')
-    showToast('入住成功')
-    loadBookings()
-  } catch (err) {
-    showFailToast(err.message)
-  }
-}
-
 const statusBadge = (s) => {
   const map = { '已入住': 'badge-green', '清洁中': 'badge-orange', '维修中': 'badge-red', '已预订': 'badge-blue', '已完成': 'badge-gray', '已取消': 'badge-gray' }
   return map[s] || 'badge-gray'
@@ -259,10 +248,14 @@ const doDirectCheckin = async () => {
   if (!checkinTarget.value) return
   const validGuests = checkinForm.value.guests.filter(g => g.name?.trim())
   if (validGuests.length === 0) { showToast('请至少填写一位客人姓名'); return }
-  await api.directCheckin(checkinTarget.value.id, { guests: validGuests, price_per_night: checkinForm.value.price_per_night, deposit: checkinForm.value.deposit })
-  checkinTarget.value = null
-  showToast('✅ 入住成功')
-  loadBookings()
+  try {
+    await api.directCheckin(checkinTarget.value.id, { guests: validGuests, price_per_night: checkinForm.value.price_per_night, deposit: checkinForm.value.deposit })
+    checkinTarget.value = null
+    showToast('✅ 入住成功')
+    loadBookings()
+  } catch (e) {
+    showFailToast(e.message)
+  }
 }
 
 const openEdit = (b) => {

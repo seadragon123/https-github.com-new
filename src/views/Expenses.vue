@@ -196,11 +196,12 @@ async function saveExpense() {
       await api.addExpense(formData)
     }
 
+    const wasEdit = !!expenseForm.value.id
     showAddForm.value = false
     expenseForm.value = { category: '日常耗材', amount: 0, note: '', expense_date: new Date().toISOString().slice(0, 10), reimbursement_person: '', receipt_image: '' }
     previewUrl.value = ''
     fileToUpload.value = null
-    showToast(expenseForm.value.id ? '已更新' : '添加成功')
+    showToast(wasEdit ? '已更新' : '添加成功')
     loadExpenses()
   } catch (e) { showFailToast(e.message) }
 }
