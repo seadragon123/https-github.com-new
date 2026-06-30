@@ -333,4 +333,23 @@ function initSchema() {
 
   // 客人表补充字段
   try { db.run("ALTER TABLE guests ADD COLUMN gender TEXT DEFAULT ''") } catch(e) {}
+
+  // 房型配置（用户可自定义）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS room_types (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `)
+  // 种子默认房型
+  const existingTypes = db.exec('SELECT COUNT(*) as cnt FROM room_types')
+  const count = existingTypes[0]?.values[0]?.[0] || 0
+  if (count === 0) {
+    const defaults = ['标准大床房','标准双床房','豪华大床房','豪华双床房','豪华套房']
+    defaults.forEach((name, i) => {
+      db.run('INSERT INTO room_types (name, sort_order) VALUES (?, ?)', [name, i])
+    })
+  }
 }

@@ -63,11 +63,7 @@
               <div class="form-group">
                 <label>房型</label>
                 <select v-model="editForm.room_type" class="form-input form-select">
-                  <option>标准大床房</option>
-                  <option>标准双床房</option>
-                  <option>豪华大床房</option>
-                  <option>豪华双床房</option>
-                  <option>豪华套房</option>
+                  <option v-for="t in roomTypes" :key="t.id" :value="t.name">{{ t.name }}</option>
                 </select>
               </div>
               <div class="form-group">
@@ -225,6 +221,7 @@ const route = useRoute()
 const router = useRouter()
 
 const room = ref({})
+const roomTypes = ref([])
 const currentBooking = ref(null)
 const bookingGuests = ref([])
 const history = ref([])
@@ -382,7 +379,13 @@ const cancelReserve = async () => {
   loadRoom()
 }
 
-onMounted(loadRoom)
+onMounted(async () => {
+  // 加载房型列表
+  try {
+    roomTypes.value = await api.getRoomTypes()
+  } catch (e) { /* ignore */ }
+  loadRoom()
+})
 </script>
 
 <style scoped>

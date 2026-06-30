@@ -151,7 +151,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../api/index.js'
 import { showToast, showFailToast } from 'vant'
 
-const roomTypes = ['全部', '标准大床房', '标准双床房', '豪华大床房', '豪华双床房', '豪华套房']
+const roomTypes = ref(['全部'])
 const weekDays = ['日', '一', '二', '三', '四', '五', '六']
 const now = new Date()
 const year = ref(now.getFullYear())
@@ -220,7 +220,14 @@ async function doBatchUpdate() {
   } catch (e) { showFailToast(e.message) }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  // 加载房型列表
+  try {
+    const types = await api.getRoomTypes()
+    roomTypes.value = ['全部', ...types.map(t => t.name)]
+  } catch (e) { /* ignore */ }
+  loadData()
+})
 </script>
 
 <style scoped>

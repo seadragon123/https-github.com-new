@@ -199,4 +199,9 @@ export default {
   createUser(data) { return request('/auth', { method: 'POST', body: JSON.stringify(data) }) },
   updateUser(id, data) { return request(`/auth/${id}`, { method: 'PUT', body: JSON.stringify(data) }) },
   deleteUser(id) { return request(`/auth/${id}`, { method: 'DELETE' }) },
+
+  // Room Types
+  getRoomTypes() { return request('/room-types') },
+  addRoomType(data) { return request('/room-types', { method: 'POST', body: JSON.stringify(data) }) },
+  deleteRoomType(id) { return request(`/room-types/${id}`, { method: 'DELETE' }) },
 }

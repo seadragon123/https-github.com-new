@@ -7,6 +7,7 @@
           <div class="subtitle">{{ rooms.length }} 间客房</div>
         </div>
         <button class="btn btn-sm btn-primary" @click="showAdd = true">+ 新增房间</button>
+        <button class="btn btn-sm btn-outline" @click="showTypeMgr = true;loadRoomTypes()" style="margin-left:6px">⚙️ 管理房型</button>
       </div>
     </header>
 
@@ -60,8 +61,7 @@
         <div class="form-group"><label>楼层</label><input v-model.number="form.floor" type="number" class="form-input" placeholder="4" /></div>
         <div class="form-group"><label>房型</label>
           <select v-model="form.room_type" class="form-input form-select">
-            <option>标准大床房</option><option>标准双床房</option>
-            <option>豪华大床房</option><option>豪华双床房</option><option>豪华套房</option>
+            <option v-for="t in roomTypes" :key="t.id" :value="t.name">{{ t.name }}</option>
           </select>
         </div>
         <div class="form-group"><label>房价 (元/晚)</label><input v-model.number="form.price" type="number" class="form-input" placeholder="如 288" /></div>
@@ -70,6 +70,25 @@
           <button class="btn btn-outline btn-block" @click="showAdd = false">取消</button>
           <button class="btn btn-primary btn-block" @click="doAdd">确认添加</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 管理房型弹窗 -->
+    <div v-if="showTypeMgr" class="modal-overlay" @click.self="showTypeMgr = false">
+      <div class="modal-content">
+        <div class="modal-title">⚙️ 管理房型</div>
+        <div class="form-group" style="display:flex;gap:8px">
+          <input v-model="newTypeName" class="form-input" placeholder="输入新房型名称" @keyup.enter="addRoomType" style="flex:1" />
+          <button class="btn btn-primary btn-sm" @click="addRoomType">添加</button>
+        </div>
+        <div class="type-list">
+          <div v-for="t in roomTypes" :key="t.id" class="type-item">
+            <span>{{ t.name }}</span>
+            <button class="btn btn-sm btn-danger" @click="deleteRoomType(t)">✕</button>
+          </div>
+        </div>
+        <van-empty v-if="roomTypes.length === 0" description="暂无房型" />
+        <button class="btn btn-outline btn-block mt-8" @click="showTypeMgr = false">关闭</button>
       </div>
     </div>
   </div>
@@ -85,6 +104,9 @@ const route = useRoute()
 const rooms = ref([])
 const activeTab = ref('')
 const showAdd = ref(false)
+const showTypeMgr = ref(false)
+const roomTypes = ref([])
+const newTypeName = ref('')
 const form = ref({ room_no: '', floor: 1, room_type: '标准大床房', description: '', price: 0 })
 
 const filteredRooms = computed(() => {
@@ -98,7 +120,7 @@ const statusBadge = (s) => {
 }
 
 async function deleteRoom(room) {
-  if (!await showConfirm('Delete room ' + room.room_no + '?')) return
+  if (!await showConfirm('确定要删除房间 ' + room.room_no + ' 吗？')) return
   try {
     await api.deleteRoom(room.id)
     rooms.value = await api.getRooms()
@@ -130,6 +152,33 @@ async function showConfirm(msg) {
   }
 }
 
+// 房型管理
+async function loadRoomTypes() {
+  try {
+    roomTypes.value = await api.getRoomTypes()
+  } catch (e) { showFailToast(e.message) }
+}
+
+async function addRoomType() {
+  const name = newTypeName.value.trim()
+  if (!name) { showToast('请输入房型名称'); return }
+  try {
+    await api.addRoomType({ name })
+    newTypeName.value = ''
+    showToast('房型已添加')
+    await loadRoomTypes()
+  } catch (e) { showFailToast(e.message) }
+}
+
+async function deleteRoomType(t) {
+  if (!await showConfirm('确定删除房型「' + t.name + '」吗？')) return
+  try {
+    await api.deleteRoomType(t.id)
+    showToast('已删除')
+    await loadRoomTypes()
+  } catch (e) { showFailToast(e.message) }
+}
+
 onMounted(async () => {
   rooms.value = await api.getRooms()
   if (route.query.status) {
@@ -147,4 +196,8 @@ onMounted(async () => {
 .guest-name { font-size: 14px; font-weight: 500; }
 .room-price { font-size: 15px; font-weight: 600; color: var(--danger, #e74c3c); }
 .room-desc { font-size: 12px; color: var(--danger); background: #fce8e6; padding: 6px 10px; border-radius: 6px; margin-top: 8px; }
+
+.type-list { max-height: 240px; overflow-y: auto; }
+.type-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
+.type-item:last-child { border-bottom: none; }
 </style>
