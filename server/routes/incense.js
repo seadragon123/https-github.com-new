@@ -57,7 +57,32 @@ router.post('/sales', (req, res) => {
   res.json({ id, product_name: pName, amount: amt, net_amount: na, success: true })
 })
 
-// 删除销售记录
+// 编辑销售记录
+router.put('/sales/:id', (req, res) => {
+  const sale = queryOne('SELECT * FROM incense_sales WHERE id = ?', [req.params.id])
+  if (!sale) return res.status(404).json({ error: '记录不存在' })
+
+  const { report_date, booking_id, product_name, price, quantity, amount, has_commission,
+          commission_rate, payment_method, guest_name } = req.body
+
+  const pName = product_name || sale.product_name
+  const pPrice = price !== undefined ? Number(price) : sale.price
+  const qty = quantity !== undefined ? Number(quantity) : sale.quantity
+  const amt = amount || (pPrice * qty)
+  const hc = has_commission !== undefined ? (has_commission ? 1 : 0) : sale.has_commission
+  const cr = commission_rate !== undefined ? Number(commission_rate) : sale.commission_rate
+  const ca = hc ? Math.round(amt * cr / 100 * 100) / 100 : 0
+  const na = amt - ca
+
+  runSql(
+    `UPDATE incense_sales SET report_date=?, booking_id=?, product_name=?, price=?, quantity=?, amount=?,
+     has_commission=?, commission_rate=?, commission_amount=?, net_amount=?, payment_method=?, guest_name=?,
+     updated_at=datetime('now','localtime') WHERE id=?`,
+    [report_date || sale.report_date, booking_id ?? sale.booking_id, pName, pPrice, qty, amt,
+     hc, cr, ca, na, payment_method || sale.payment_method, guest_name ?? sale.guest_name, req.params.id]
+  )
+  res.json({ success: true, id: Number(req.params.id) })
+})
 router.delete('/sales/:id', (req, res) => {
   const sale = queryOne('SELECT * FROM incense_sales WHERE id = ?', [req.params.id])
   if (!sale) return res.status(404).json({ error: '记录不存在' })

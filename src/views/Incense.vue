@@ -55,7 +55,10 @@
             </div>
             <div class="sale-amount">
               <div class="sale-total">¥{{ s.net_amount || s.amount }}</div>
-              <button class="btn btn-sm btn-danger" @click="deleteSale(s)">✕</button>
+              <div class="expense-actions">
+                <button class="btn btn-sm btn-outline" @click.stop="editSale(s)">✎</button>
+                <button class="btn btn-sm btn-danger" @click.stop="deleteSale(s)">✕</button>
+              </div>
             </div>
           </div>
           <van-empty v-if="sales.length === 0" description="暂无销售记录" />
@@ -66,7 +69,7 @@
     <!-- 新增销售弹窗 -->
     <div v-if="showNewSale" class="modal-overlay" @click.self="showNewSale = false">
       <div class="modal-content">
-        <div class="modal-title">➕ 新增销售</div>
+        <div class="modal-title">{{ isEditing ? '✎ 编辑销售' : '➕ 新增销售' }}</div>
         <div class="form-group">
           <label>销售日期 *</label>
           <input v-model="saleForm.report_date" type="date" class="form-input" />
@@ -136,8 +139,8 @@
           <span>实收:</span><span>¥{{ saleForm.net_amount }}</span>
         </div>
         <div class="flex-between gap-4 mt-8">
-          <button class="btn btn-outline btn-block" @click="showNewSale = false">取消</button>
-          <button class="btn btn-primary btn-block" @click="submitSale">确认登记</button>
+          <button class="btn btn-outline btn-block" @click="closeForm">取消</button>
+          <button class="btn btn-primary btn-block" @click="submitSale">{{ isEditing ? '保存修改' : '确认登记' }}</button>
         </div>
       </div>
     </div>
@@ -152,6 +155,8 @@ import { showToast, showFailToast, showConfirmDialog } from 'vant'
 const sales = ref([])
 const activeBookings = ref([])
 const showNewSale = ref(false)
+const editingSaleId = ref(null)
+const isEditing = computed(() => !!editingSaleId.value)
 const saleForm = ref(emptySaleForm())
 const saleDateStart = ref(new Date().toISOString().slice(0, 10))
 const saleDateEnd = ref(new Date().toISOString().slice(0, 10))
@@ -208,13 +213,42 @@ async function submitSale() {
   if (!saleForm.value.product_name || !saleForm.value.price) { showToast('请填写商品名称和价格'); return }
   if (saleForm.value.payment_method === '挂房账' && !saleForm.value.booking_id) { showToast('挂房账请选择订单'); return }
   try {
-    await api.addIncenseSale(saleForm.value)
-    showNewSale.value = false
-    saleForm.value = emptySaleForm()
-    showToast('登记成功！')
+    if (editingSaleId.value) {
+      await api.updateIncenseSale(editingSaleId.value, saleForm.value)
+      showToast('修改成功！')
+    } else {
+      await api.addIncenseSale(saleForm.value)
+      showToast('登记成功！')
+    }
+    closeForm()
     const s = await api.getIncenseSales(null, saleDateStart.value, saleDateEnd.value)
     sales.value = s.items || []
   } catch (e) { showFailToast(e.message) }
+}
+
+function editSale(s) {
+  editingSaleId.value = s.id
+  saleForm.value = {
+    report_date: s.report_date || '',
+    product_name: s.product_name || '',
+    price: s.price || 0,
+    quantity: s.quantity || 1,
+    amount: s.amount || 0,
+    has_commission: s.has_commission || 0,
+    commission_rate: s.commission_rate || 5,
+    commission_amount: s.commission_amount || 0,
+    net_amount: s.net_amount || s.amount || 0,
+    payment_method: s.payment_method || '现金',
+    booking_id: s.booking_id || '',
+    guest_name: s.guest_name || ''
+  }
+  showNewSale.value = true
+}
+
+function closeForm() {
+  showNewSale.value = false
+  editingSaleId.value = null
+  saleForm.value = emptySaleForm()
 }
 
 async function deleteSale(s) {
@@ -240,4 +274,5 @@ onMounted(loadData)
 .sale-meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
 .sale-amount { text-align: right; }
 .sale-total { font-size: 15px; font-weight: 700; color: var(--danger); }
+.expense-actions { display: flex; gap: 4px; margin-top: 4px; justify-content: flex-end; }
 </style>

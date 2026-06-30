@@ -102,6 +102,7 @@ export default {
     return request(`/incense/sales?${params.toString()}`)
   },
   addIncenseSale(data) { return request('/incense/sales', { method: 'POST', body: JSON.stringify(data) }) },
+  updateIncenseSale(id, data) { return request(`/incense/sales/${id}`, { method: 'PUT', body: JSON.stringify(data) }) },
   deleteIncenseSale(id) { return request(`/incense/sales/${id}`, { method: 'DELETE' }) },
 
   // Expenses (独立路由，含图片上传)
