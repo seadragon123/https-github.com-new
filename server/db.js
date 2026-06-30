@@ -279,7 +279,7 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS price_calendar (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       target_date TEXT NOT NULL,
-      room_type TEXT NOT NULL DEFAULT '全部' CHECK(room_type IN ('全部','标准大床房','标准双床房','豪华大床房','豪华双床房','豪华套房')),
+      room_type TEXT NOT NULL DEFAULT '全部',
       price REAL NOT NULL DEFAULT 0,
       is_weekend INTEGER DEFAULT 0,
       is_holiday INTEGER DEFAULT 0,
@@ -333,6 +333,10 @@ function initSchema() {
 
   // 客人表补充字段
   try { db.run("ALTER TABLE guests ADD COLUMN gender TEXT DEFAULT ''") } catch(e) {}
+
+  // 迁移：移除 price_calendar 的硬编码房型 CHECK 约束（支持自定义房型）
+  // 先删旧表，下面的 CREATE TABLE IF NOT EXISTS 会重建（无 CHECK）
+  try { db.run('DROP TABLE IF EXISTS price_calendar') } catch(e) {}
 
   // 房型配置（用户可自定义）
   db.run(`
