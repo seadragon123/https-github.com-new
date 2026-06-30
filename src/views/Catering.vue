@@ -132,6 +132,41 @@
           <van-empty v-if="pendingOrders.length === 0" description="暂无未结账订单" />
         </div>
       </div>
+
+      <!-- 已结账订单 -->
+      <div class="card">
+        <div class="card-header">
+          <span>✅ 已结账订单</span>
+          <span class="text-sm text-muted">共 {{ paidOrders.length }} 单 · ¥{{ paidOrders.reduce((s,o) => s + (o.total||0), 0).toFixed(2) }}</span>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <table class="data-table" v-if="paidOrders.length > 0">
+            <thead>
+              <tr>
+                <th>订单号</th>
+                <th>客人</th>
+                <th>类型</th>
+                <th>菜品</th>
+                <th style="width:70px">金额</th>
+                <th>支付方式</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="o in paidOrders" :key="o.id" class="clickable-row" @click="toggleOrderDetail(o.id)">
+                <td class="text-sm">{{ o.order_no }}</td>
+                <td>{{ o.guest_name }}</td>
+                <td><span class="badge" :class="o.order_type==='外卖'?'badge-orange':'badge-blue'">{{ o.order_type }}</span></td>
+                <td class="text-sm">{{ o.items?.map(i=>i.name+'×'+i.qty).join('、') || '—' }}</td>
+                <td class="text-right">¥{{ o.total }}</td>
+                <td>{{ o.payment_method || '—' }}</td>
+                <td class="text-sm text-muted">{{ o.paid_at?.slice(0,16) || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <van-empty v-if="paidOrders.length === 0" description="暂无已结账订单" />
+        </div>
+      </div>
     </div>
 
     <!-- 新增/编辑菜品弹窗 -->
@@ -307,6 +342,7 @@ const availableMenus = computed(() => menus.value.filter(m => m.is_available))
 const filteredMenus = computed(() => menuCat.value === '全部' ? menus.value : menus.value.filter(m => m.category === menuCat.value))
 const summary = computed(() => summaryData.value)
 const pendingOrders = computed(() => orders.value.filter(o => o.status === '就餐中'))
+const paidOrders = computed(() => orders.value.filter(o => o.status === '已结账'))
 const orderTotal = computed(() => orderItems.value.reduce((s, i) => s + i.price * i.qty, 0))
 const editOrderTotal = computed(() => editOrderItems.value.reduce((s, i) => s + i.price * i.qty, 0))
 
@@ -510,4 +546,11 @@ onMounted(loadData)
 .ranking-stats { text-align: right; }
 .stat-qty { font-size: 16px; font-weight: 700; color: var(--primary); }
 .stat-revenue { font-size: 12px; color: var(--gray-500); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { background: var(--gray-50); padding: 8px 4px; font-weight: 600; font-size: 12px; color: var(--gray-700); text-align: left; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+.data-table td { padding: 6px 4px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+.clickable-row { cursor: pointer; transition: background .1s; }
+.clickable-row:hover { background: var(--primary-light); }
+.clickable-row:active { background: var(--gray-200); }
 </style>
