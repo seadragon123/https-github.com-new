@@ -188,23 +188,17 @@ router.post('/cleanup', (req, res) => {
 
   const db = getDb()
 
+  db.run('PRAGMA foreign_keys = OFF')
+
   // 删除业务数据（按外键依赖顺序）
-  db.run('DELETE FROM incense_sales')
-  db.run('DELETE FROM incense_revenue')
-  db.run('DELETE FROM catering_orders')
-  db.run('DELETE FROM deposit_records')
-  db.run('DELETE FROM booking_guests')
-  db.run('DELETE FROM bookings')
-  db.run('DELETE FROM cleaning')
-  db.run('DELETE FROM maintenance')
-  db.run('DELETE FROM todos')
-  db.run('DELETE FROM expenses')
-  db.run('DELETE FROM revenue_details')
-  db.run('DELETE FROM daily_reports')
-  db.run('DELETE FROM price_calendar')
-  db.run('DELETE FROM shift_reports')
-  db.run('DELETE FROM incense_products')
-  db.run("DELETE FROM sqlite_sequence")
+  const tables = ['incense_sales','incense_revenue','catering_orders','deposit_records',
+    'booking_guests','bookings','cleaning','maintenance','todos','expenses',
+    'revenue_details','daily_reports','price_calendar','shift_reports','incense_products']
+  for (const t of tables) {
+    try { db.run(`DELETE FROM ${t}`) } catch(e) {}
+  }
+
+  db.run('PRAGMA foreign_keys = ON')
 
   // 客房重置为空房状态
   db.run("UPDATE rooms SET status='空房', updated_at=datetime('now','localtime')")
