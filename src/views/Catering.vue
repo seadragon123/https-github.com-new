@@ -96,7 +96,9 @@
         <div class="card-header">
           <span>📋 未结账订单</span>
           <div style="display:flex;gap:6px;align-items:center">
-            <input v-model="orderDate" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadOrders" />
+            <input v-model="orderDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadOrders" />
+            <span class="text-sm text-muted">至</span>
+            <input v-model="orderDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadOrders" />
             <button class="btn btn-sm btn-outline" @click="loadOrders">🔄 刷新</button>
           </div>
         </div>
@@ -291,7 +293,8 @@ const summaryData = ref({ totalOrders: 0, totalRevenue: 0, dineIn: 0, takeout: 0
 const cateringTab = ref('menu')
 const ranking = ref([])
 const rankingPeriod = ref('all')
-const orderDate = ref(new Date().toISOString().slice(0, 10))
+const orderDateStart = ref(new Date().toISOString().slice(0, 10))
+const orderDateEnd = ref(new Date().toISOString().slice(0, 10))
 
 async function loadRanking() {
   try {
@@ -338,7 +341,7 @@ async function loadData() {
   try {
     const [m, o, b] = await Promise.all([
       api.getMenus(),
-      api.getCateringOrders(orderDate.value),
+      api.getCateringOrders(null, null, orderDateStart.value, orderDateEnd.value),
       api.getBookings('已入住')
     ])
     menus.value = m
@@ -355,7 +358,7 @@ async function loadData() {
 
 async function loadOrders() {
   try {
-    const o = await api.getCateringOrders(orderDate.value)
+    const o = await api.getCateringOrders(null, null, orderDateStart.value, orderDateEnd.value)
     orders.value = (o.orders || []).map(ord => ({
       ...ord,
       items: typeof ord.items === 'string' ? JSON.parse(ord.items) : (ord.items || [])

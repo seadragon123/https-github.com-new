@@ -83,7 +83,17 @@ export default {
   addMenu(data) { return request('/catering/menus', { method: 'POST', body: JSON.stringify(data) }) },
   updateMenu(id, data) { return request(`/catering/menus/${id}`, { method: 'PUT', body: JSON.stringify(data) }) },
   deleteMenu(id) { return request(`/catering/menus/${id}`, { method: 'DELETE' }) },
-  getCateringOrders(date, status) { return request(`/catering/orders?date=${date || ''}&status=${status || ''}`) },
+  getCateringOrders(date, status, start_date, end_date) {
+    const params = new URLSearchParams()
+    if (start_date && end_date) {
+      params.set('start_date', start_date)
+      params.set('end_date', end_date)
+    } else if (date) {
+      params.set('date', date)
+    }
+    if (status) params.set('status', status)
+    return request(`/catering/orders?${params.toString()}`)
+  },
   createCateringOrder(data) { return request('/catering/orders', { method: 'POST', body: JSON.stringify(data) }) },
   updateCateringOrder(id, data) { return request(`/catering/orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }) },
   payCateringOrder(id, data) { return request(`/catering/orders/${id}/pay`, { method: 'POST', body: JSON.stringify(data) }) },

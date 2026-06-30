@@ -59,11 +59,20 @@ function generateOrderNo() {
 
 // 订单列表
 router.get('/orders', (req, res) => {
-  const { date, status } = req.query
+  const { date, status, start_date, end_date } = req.query
   const today = new Date().toISOString().slice(0, 10)
-  const d = date || today
-  let sql = `SELECT * FROM catering_orders WHERE date(created_at) = ?`
-  const params = [d]
+
+  let sql = `SELECT * FROM catering_orders WHERE 1=1`
+  const params = []
+
+  if (start_date && end_date) {
+    sql += ` AND date(created_at) >= ? AND date(created_at) <= ?`
+    params.push(start_date, end_date)
+  } else {
+    const d = date || today
+    sql += ` AND date(created_at) = ?`
+    params.push(d)
+  }
   if (status && status !== '全部') {
     sql += ` AND status = ?`
     params.push(status)
@@ -77,16 +86,17 @@ router.get('/orders', (req, res) => {
     items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || [])
   }))
 
-  // 今日汇总
-  const todayOrders = queryAll(`SELECT * FROM catering_orders WHERE date(created_at) = ?`, [d])
-  const totalOrders = todayOrders.length
-  const totalRevenue = todayOrders.reduce((s, o) => s + (o.status === '已结账' ? (o.total || 0) : 0), 0)
-  const dineIn = todayOrders.filter(o => o.order_type === '堂食' && o.status !== '已取消').length
-  const takeout = todayOrders.filter(o => o.order_type === '外卖' && o.status !== '已取消').length
-  const linked = todayOrders.filter(o => o.booking_id && o.status !== '已取消').length
+  // 今日汇总（基于筛选范围）
+  const summaryOrders = start_date && end_date ? rows : queryAll(`SELECT * FROM catering_orders WHERE date(created_at) = ?`, [date || today])
+  const totalOrders = summaryOrders.length
+  const totalRevenue = summaryOrders.reduce((s, o) => s + (o.status === '已结账' ? (o.total || 0) : 0), 0)
+  const dineIn = summaryOrders.filter(o => o.order_type === '堂食' && o.status !== '已取消').length
+  const takeout = summaryOrders.filter(o => o.order_type === '外卖' && o.status !== '已取消').length
+  const linked = summaryOrders.filter(o => o.booking_id && o.status !== '已取消').length
 
   res.json({
-    date: d,
+    date: date || today,
+    start_date, end_date,
     summary: { totalOrders, totalRevenue, dineIn, takeout, linked },
     orders
   })
