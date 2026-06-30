@@ -137,7 +137,12 @@
       <div class="card">
         <div class="card-header">
           <span>✅ 已结账订单</span>
-          <span class="text-sm text-muted">共 {{ paidOrders.length }} 单 · ¥{{ paidOrders.reduce((s,o) => s + (o.total||0), 0).toFixed(2) }}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input v-model="paidDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadPaidOrders" />
+            <span class="text-sm text-muted">至</span>
+            <input v-model="paidDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadPaidOrders" />
+            <span class="text-sm text-muted">共 {{ paidOrders.length }} 单 · ¥{{ paidOrders.reduce((s,o) => s + (o.total||0), 0).toFixed(2) }}</span>
+          </div>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto">
           <table class="data-table" v-if="paidOrders.length > 0">
@@ -330,6 +335,9 @@ const ranking = ref([])
 const rankingPeriod = ref('all')
 const orderDateStart = ref(new Date().toISOString().slice(0, 10))
 const orderDateEnd = ref(new Date().toISOString().slice(0, 10))
+const paidDateStart = ref(new Date().toISOString().slice(0, 10))
+const paidDateEnd = ref(new Date().toISOString().slice(0, 10))
+const paidOrders = ref([])
 
 async function loadRanking() {
   try {
@@ -342,7 +350,6 @@ const availableMenus = computed(() => menus.value.filter(m => m.is_available))
 const filteredMenus = computed(() => menuCat.value === '全部' ? menus.value : menus.value.filter(m => m.category === menuCat.value))
 const summary = computed(() => summaryData.value)
 const pendingOrders = computed(() => orders.value.filter(o => o.status === '就餐中'))
-const paidOrders = computed(() => orders.value.filter(o => o.status === '已结账'))
 const orderTotal = computed(() => orderItems.value.reduce((s, i) => s + i.price * i.qty, 0))
 const editOrderTotal = computed(() => editOrderItems.value.reduce((s, i) => s + i.price * i.qty, 0))
 
@@ -387,6 +394,7 @@ async function loadData() {
     }))
     summaryData.value = o.summary || { totalOrders: 0, totalRevenue: 0, dineIn: 0, takeout: 0, linked: 0 }
     activeBookings.value = b
+    loadPaidOrders()
   } catch (e) {
     showFailToast(e.message)
   }
@@ -400,9 +408,20 @@ async function loadOrders() {
       items: typeof ord.items === 'string' ? JSON.parse(ord.items) : (ord.items || [])
     }))
     summaryData.value = o.summary || { totalOrders: 0, totalRevenue: 0, dineIn: 0, takeout: 0, linked: 0 }
+    loadPaidOrders()
   } catch (e) {
     showFailToast(e.message)
   }
+}
+
+async function loadPaidOrders() {
+  try {
+    const o = await api.getCateringOrders(null, '已结账', paidDateStart.value, paidDateEnd.value)
+    paidOrders.value = (o.orders || []).map(ord => ({
+      ...ord,
+      items: typeof ord.items === 'string' ? JSON.parse(ord.items) : (ord.items || [])
+    }))
+  } catch (e) { /* ignore */ }
 }
 
 async function saveMenu() {
