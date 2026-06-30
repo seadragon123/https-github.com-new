@@ -228,16 +228,18 @@ async function submitSale() {
 
 function editSale(s) {
   editingSaleId.value = s.id
+  const qty = s.quantity || 1
+  const amt = s.amount || 0
   saleForm.value = {
     report_date: s.report_date || '',
     product_name: s.product_name || '',
-    price: s.price || 0,
-    quantity: s.quantity || 1,
-    amount: s.amount || 0,
+    price: qty > 0 ? Math.round(amt / qty * 100) / 100 : amt,
+    quantity: qty,
+    amount: amt,
     has_commission: s.has_commission || 0,
     commission_rate: s.commission_rate || 5,
     commission_amount: s.commission_amount || 0,
-    net_amount: s.net_amount || s.amount || 0,
+    net_amount: s.net_amount || amt || 0,
     payment_method: s.payment_method || '现金',
     booking_id: s.booking_id || '',
     guest_name: s.guest_name || ''
