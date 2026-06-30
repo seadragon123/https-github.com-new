@@ -48,7 +48,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(r, i) in roomItems" :key="r._key">
+              <tr v-for="(r, i) in roomItems" :key="r._key" class="clickable-row" @click="showDetail(r, 'room')">
                 <td class="tc">{{ i + 1 }}</td>
                 <td>{{ r.room_no }}</td>
                 <td>{{ r.channel_type || '—' }}</td>
@@ -62,7 +62,7 @@
         </div>
         <div class="card-footer flex-between">
           <span class="text-sm">客房收入合计</span>
-          <span class="stat-num">¥{{ roomTotal }}</span>
+          <span class="stat-num">¥{{ roomTotal.toFixed(2) }}</span>
         </div>
       </div>
 
@@ -88,7 +88,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(r, i) in incenseItems" :key="r._key">
+              <tr v-for="(r, i) in incenseItems" :key="r._key" class="clickable-row" @click="showDetail(r, 'incense')">
                 <td class="tc">{{ i + 1 }}</td>
                 <td>{{ r.product_name || '—' }}</td>
                 <td class="text-right">¥{{ unitPrice(r) }}</td>
@@ -103,7 +103,7 @@
         </div>
         <div class="card-footer flex-between">
           <span class="text-sm">请香收入合计</span>
-          <span class="stat-num">¥{{ incenseTotal }}</span>
+          <span class="stat-num">¥{{ incenseTotal.toFixed(2) }}</span>
         </div>
       </div>
 
@@ -128,7 +128,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(r, i) in cateringItems" :key="r._key">
+              <tr v-for="(r, i) in cateringItems" :key="r._key" class="clickable-row" @click="showDetail(r, 'catering')">
                 <td class="tc">{{ i + 1 }}</td>
                 <td>{{ r.guest_name }}</td>
                 <td><span class="badge" :class="r.order_type==='外卖'?'badge-orange':'badge-blue'">{{ r.order_type }}</span></td>
@@ -142,7 +142,7 @@
         </div>
         <div class="card-footer flex-between">
           <span class="text-sm">餐饮收入合计</span>
-          <span class="stat-num">¥{{ cateringTotal }}</span>
+          <span class="stat-num">¥{{ cateringTotal.toFixed(2) }}</span>
         </div>
       </div>
 
@@ -161,14 +161,18 @@
                 <th style="width:36px">#</th>
                 <th>支出类别</th>
                 <th style="width:70px">金额</th>
+                <th>支出日期</th>
+                <th>报销人</th>
                 <th>备注</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(e, i) in allExpenses" :key="e._key">
+              <tr v-for="(e, i) in allExpenses" :key="e._key" class="clickable-row" @click="showDetail(e, 'expense')">
                 <td class="tc">{{ i + 1 }}</td>
                 <td><span class="badge badge-orange">{{ e.category }}</span></td>
                 <td class="text-right">¥{{ e.amount }}</td>
+                <td class="text-sm text-muted">{{ e.expense_date || '—' }}</td>
+                <td class="text-sm text-muted">{{ e.reimbursement_person || '—' }}</td>
                 <td class="text-muted text-sm">{{ e.note || '—' }}</td>
               </tr>
               <van-empty v-if="allExpenses.length === 0" description="暂无记录" />
@@ -177,7 +181,7 @@
         </div>
         <div class="card-footer flex-between">
           <span class="text-sm">当日总支出</span>
-          <span class="stat-num text-danger">¥{{ expenseTotal }}</span>
+          <span class="stat-num text-danger">¥{{ expenseTotal.toFixed(2) }}</span>
         </div>
       </div>
 
@@ -227,12 +231,12 @@
               <tr><td colspan="3" class="sep-line"></td></tr>
               <tr class="summary-row">
                 <td>本月累计收入</td>
-                <td class="stat-num">¥{{ summary.monthly.totalRevenue }}</td>
+                <td class="stat-num">¥{{ summary.monthly.totalRevenue.toFixed(2) }}</td>
                 <td></td>
               </tr>
               <tr class="summary-row">
                 <td>本月累计支出</td>
-                <td class="stat-num text-danger">¥{{ summary.monthly.totalExpense }}</td>
+                <td class="stat-num text-danger">¥{{ summary.monthly.totalExpense.toFixed(2) }}</td>
                 <td></td>
               </tr>
               <tr class="summary-row net-row">
@@ -246,6 +250,22 @@
         <div class="card-footer flex-between">
           <span class="text-sm">报告人: {{ reporter || '未填写' }}</span>
         </div>
+      </div>
+    </div>
+
+    <!-- 记录详情弹窗 -->
+    <div v-if="showDetailModal" class="modal-overlay" @click.self="showDetailModal = false">
+      <div class="modal-content" style="max-width:380px">
+        <div class="modal-title">{{ detailTitle }}</div>
+        <table class="data-table detail-table">
+          <tbody>
+            <tr v-for="(v, k) in detailFields" :key="k">
+              <td class="detail-key">{{ k }}</td>
+              <td class="detail-val">{{ v }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn btn-outline btn-block mt-8" @click="showDetailModal = false">关闭</button>
       </div>
     </div>
   </div>
@@ -264,6 +284,11 @@ const allExpenses = ref([])
 const cateringItems = ref([])
 const expensesData = ref({ categories: {}, dailyTotal: 0, monthlyByCategory: {}, monthlyTotal: 0 })
 const summary = ref({ daily: { roomRevenue: 0, cateringRevenue: 0, incenseRevenue: 0, totalRevenue: 0, totalExpense: 0, netCashflow: 0 }, monthly: { totalRevenue: 0, totalExpense: 0, netBalance: 0 } })
+
+// 详情弹窗
+const showDetailModal = ref(false)
+const detailRecord = ref(null)
+const detailType = ref('')
 
 const expenseCategories = ['日常耗材', '维修杂费', '营销费用', '水电费用', '其他支出']
 
@@ -318,6 +343,69 @@ const monthlyExpenseByCat = computed(() => expensesData.value.monthlyByCategory 
 
 const netClass = computed(() => summary.value.daily.netCashflow >= 0 ? 'text-success' : 'text-danger')
 const monthNetClass = computed(() => summary.value.monthly.netBalance >= 0 ? 'text-success' : 'text-danger')
+
+const detailTitle = computed(() => {
+  const titles = { room: '🏨 客房收入详情', incense: '🪷 请香收入详情', catering: '🍜 餐饮收入详情', expense: '💸 支出详情' }
+  return titles[detailType.value] || '详情'
+})
+
+const detailFields = computed(() => {
+  const r = detailRecord.value
+  if (!r) return {}
+  const t = detailType.value
+  if (t === 'room') {
+    return {
+      '房号': r.room_no || '—',
+      '渠道': r.channel_type || '—',
+      '客户姓名': parseGuestName(r.channel_source),
+      '金额': '¥' + (r.amount || 0),
+      '单价': r.price ? '¥' + r.price : '—',
+      '支付方式': r.payment_method || '—',
+      '类型': r.time || '—',
+      '原始来源': r.channel_source || '—'
+    }
+  } else if (t === 'incense') {
+    return {
+      '商品名称': r.product_name || '—',
+      '数量': r.quantity || 1,
+      '销售金额': '¥' + (r.amount || 0),
+      '返佣比例': r.has_commission ? (r.commission_rate || 0) + '%' : '无',
+      '返佣金额': (r.commission_amount || 0) > 0 ? '¥' + r.commission_amount : '—',
+      '实收金额': '¥' + (r.net_amount || r.amount || 0),
+      '支付方式': r.payment_method || '—',
+      '客人姓名': r.guest_name || '散客',
+      '日期': r.report_date || '—'
+    }
+  } else if (t === 'catering') {
+    return {
+      '订单号': r.order_no || '—',
+      '客人姓名': r.guest_name || '—',
+      '订单类型': r.order_type || '—',
+      '菜品': formatDishNames(r.items),
+      '金额': '¥' + (r.total || 0),
+      '支付方式': r.payment_method || '—',
+      '状态': r.status || '—',
+      '联系电话': r.guest_phone || '—'
+    }
+  } else if (t === 'expense') {
+    return {
+      '类别': r.category || '—',
+      '金额': '¥' + (r.amount || 0),
+      '支出日期': r.expense_date || '—',
+      '报销人': r.reimbursement_person || '—',
+      '备注': r.note || '—',
+      '录入日期': r.report_date || '—',
+      '创建时间': r.created_at || '—'
+    }
+  }
+  return {}
+})
+
+function showDetail(item, type) {
+  detailRecord.value = item
+  detailType.value = type
+  showDetailModal.value = true
+}
 
 function addRoomRow() {
   roomItems.value.push({ _key: genKey(), time: '', room_no: '', price: 0, channel_type: '', channel_source: '', amount: 0, payment_method: '' })
@@ -497,7 +585,7 @@ function printReport() {
     for (const r of roomItems.value) {
       html += `<tr><td>${r.room_no}</td><td>${r.channel_type || '—'}</td><td>${parseGuestName(r.channel_source)}</td><td>¥${r.amount}</td><td>${r.payment_method || '—'}</td></tr>`
     }
-    html += `</table><div class="total">客房收入合计: ¥${roomTotal.value}</div>`
+    html += `</table><div class="total">客房收入合计: ¥${roomTotal.value.toFixed(2)}</div>`
   }
   // 餐饮收入
   if (cateringItems.value.length > 0) {
@@ -505,7 +593,7 @@ function printReport() {
     for (const r of cateringItems.value) {
       html += `<tr><td>${r.guest_name}</td><td>${r.order_type}</td><td>${formatDishNames(r.items)}</td><td>¥${r.total}</td><td>${r.payment_method || '—'}</td></tr>`
     }
-    html += `</table><div class="total">餐饮收入合计: ¥${cateringTotal.value}</div>`
+    html += `</table><div class="total">餐饮收入合计: ¥${cateringTotal.value.toFixed(2)}</div>`
   }
   // 请香收入
   if (incenseItems.value.length > 0) {
@@ -513,15 +601,15 @@ function printReport() {
     for (const r of incenseItems.value) {
       html += `<tr><td>${r.product_name || '—'}</td><td>¥${unitPrice(r)}</td><td>${r.quantity || 1}</td><td>¥${r.net_amount || r.amount}</td><td>${(r.commission_amount||0) > 0 ? '¥'+r.commission_amount : '—'}</td><td>${r.payment_method || '—'}</td></tr>`
     }
-    html += `</table><div class="total">请香收入合计: ¥${incenseTotal.value}</div>`
+    html += `</table><div class="total">请香收入合计: ¥${incenseTotal.value.toFixed(2)}</div>`
   }
   // 支出明细
   if (allExpenses.value.length > 0) {
-    html += `<h3>四、支出明细</h3><table><tr><th>类别</th><th>金额</th><th>备注</th></tr>`
+    html += `<h3>四、支出明细</h3><table><tr><th>类别</th><th>金额</th><th>支出日期</th><th>报销人</th><th>备注</th></tr>`
     for (const e of allExpenses.value) {
-      if (e.amount > 0) html += `<tr><td>${e.category}</td><td>¥${e.amount}</td><td>${e.note || '—'}</td></tr>`
+      if (e.amount > 0) html += `<tr><td>${e.category}</td><td>¥${e.amount}</td><td>${e.expense_date || '—'}</td><td>${e.reimbursement_person || '—'}</td><td>${e.note || '—'}</td></tr>`
     }
-    html += `</table><div class="total">支出合计: ¥${expenseTotal.value}</div>`
+    html += `</table><div class="total">支出合计: ¥${expenseTotal.value.toFixed(2)}</div>`
   }
   const secNo = [roomItems, cateringItems, incenseItems, allExpenses].filter(a => a.value.length > 0).length
   html += `<h3>${['五',''][0]}经营结果汇总</h3>
@@ -530,8 +618,8 @@ function printReport() {
     <tr><td>当日总收入</td><td>¥${summary.value.daily.totalRevenue}</td></tr>
     <tr><td>当日总支出</td><td>¥${summary.value.daily.totalExpense}</td></tr>
     <tr><td><strong>当日净现金流</strong></td><td><strong>¥${summary.value.daily.netCashflow.toFixed(2)}</strong></td></tr>
-    <tr><td>本月累计收入</td><td>¥${summary.value.monthly.totalRevenue}</td></tr>
-    <tr><td>本月累计支出</td><td>¥${summary.value.monthly.totalExpense}</td></tr>
+    <tr><td>本月累计收入</td><td>¥${summary.value.monthly.totalRevenue.toFixed(2)}</td></tr>
+    <tr><td>本月累计支出</td><td>¥${summary.value.monthly.totalExpense.toFixed(2)}</td></tr>
     <tr><td><strong>本月累计结余</strong></td><td><strong>¥${summary.value.monthly.netBalance.toFixed(2)}</strong></td></tr>
   </table>
   <div class="report-footer">报告人: ${reporter.value || '___________'}  |  ${reportDate.value}</div>
@@ -554,35 +642,35 @@ function exportCSV() {
     for (const r of roomItems.value) {
       csv += `${r.room_no},${r.channel_type || '—'},${parseGuestName(r.channel_source)},${r.amount},${r.payment_method || '—'}\n`
     }
-    csv += `,客房收入合计,,¥${roomTotal.value}\n\n`
+    csv += `,客房收入合计,,¥${roomTotal.value.toFixed(2)}\n\n`
   }
   if (cateringItems.value.length > 0) {
     csv += `餐饮收入\n客人姓名,类型,菜品名称,金额,支付方式\n`
     for (const r of cateringItems.value) {
       csv += `${r.guest_name},${r.order_type},"${formatDishNames(r.items)}",${r.total},${r.payment_method || '—'}\n`
     }
-    csv += `,餐饮收入合计,,¥${cateringTotal.value}\n\n`
+    csv += `,餐饮收入合计,,¥${cateringTotal.value.toFixed(2)}\n\n`
   }
   if (incenseItems.value.length > 0) {
     csv += `请香收入\n商品名称,单价,数量,金额,返佣金额,支付方式\n`
     for (const r of incenseItems.value) {
       csv += `${r.product_name || '—'},${unitPrice(r)},${r.quantity || 1},${r.net_amount || r.amount},${(r.commission_amount||0)>0 ? r.commission_amount : '—'},${r.payment_method || '—'}\n`
     }
-    csv += `,请香收入合计,,,,¥${incenseTotal.value}\n\n`
+    csv += `,请香收入合计,,,,¥${incenseTotal.value.toFixed(2)}\n\n`
   }
   if (allExpenses.value.length > 0) {
     csv += `支出\n类别,金额,备注\n`
     for (const e of allExpenses.value) {
       if (e.amount > 0) csv += `${e.category},${e.amount},"${e.note || ''}"\n`
     }
-    csv += `,支出合计,¥${expenseTotal.value}\n\n`
+    csv += `,支出合计,¥${expenseTotal.value.toFixed(2)}\n\n`
   }
   csv += `经营汇总\n项目,金额\n`
   csv += `当日总收入,¥${summary.value.daily.totalRevenue}\n`
   csv += `当日总支出,¥${summary.value.daily.totalExpense}\n`
   csv += `当日净现金流,¥${summary.value.daily.netCashflow.toFixed(2)}\n`
-  csv += `本月累计收入,¥${summary.value.monthly.totalRevenue}\n`
-  csv += `本月累计支出,¥${summary.value.monthly.totalExpense}\n`
+  csv += `本月累计收入,¥${summary.value.monthly.totalRevenue.toFixed(2)}\n`
+  csv += `本月累计支出,¥${summary.value.monthly.totalExpense.toFixed(2)}\n`
   csv += `本月累计结余,¥${summary.value.monthly.netBalance.toFixed(2)}\n`
   csv += `报告人,${reporter.value || ''}\n`
 
@@ -734,4 +822,12 @@ input[type="number"].cell-input { text-align: right; }
 .text-danger { color: var(--danger); }
 .summary-table td { padding: 10px 8px; }
 .sep-line { padding: 0 !important; height: 1px; background: var(--gray-200); }
+
+.clickable-row { cursor: pointer; transition: background .1s; }
+.clickable-row:hover { background: var(--primary-light); }
+.clickable-row:active { background: var(--gray-200); }
+
+.detail-table { font-size: 13px; }
+.detail-key { width: 90px; font-weight: 600; color: var(--gray-600); padding: 6px 4px; border-bottom: 1px solid var(--gray-100); vertical-align: top; }
+.detail-val { padding: 6px 4px; border-bottom: 1px solid var(--gray-100); word-break: break-all; }
 </style>

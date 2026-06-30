@@ -180,4 +180,56 @@ router.post('/', (req, res) => {
   res.json({ success: true, message: '全量种子数据已导入' })
 })
 
+// 清理业务数据，仅保留 客房+客人+菜品
+router.post('/cleanup', (req, res) => {
+  if (req.query.token !== 'seednow') {
+    return res.status(403).json({ error: 'Invalid token' })
+  }
+
+  const db = getDb()
+
+  // 删除业务数据（按外键依赖顺序）
+  db.run('DELETE FROM incense_sales')
+  db.run('DELETE FROM incense_revenue')
+  db.run('DELETE FROM catering_orders')
+  db.run('DELETE FROM deposit_records')
+  db.run('DELETE FROM booking_guests')
+  db.run('DELETE FROM bookings')
+  db.run('DELETE FROM cleaning')
+  db.run('DELETE FROM maintenance')
+  db.run('DELETE FROM todos')
+  db.run('DELETE FROM expenses')
+  db.run('DELETE FROM revenue_details')
+  db.run('DELETE FROM daily_reports')
+  db.run('DELETE FROM price_calendar')
+  db.run('DELETE FROM shift_reports')
+  db.run('DELETE FROM incense_products')
+  db.run("DELETE FROM sqlite_sequence")
+
+  // 客房重置为空房状态
+  db.run("UPDATE rooms SET status='空房', updated_at=datetime('now','localtime')")
+
+  saveDb()
+
+  // 统计保留的数据
+  const roomCount = db.exec("SELECT COUNT(*) as c FROM rooms")[0]?.values[0][0] || 0
+  const guestCount = db.exec("SELECT COUNT(*) as c FROM guests")[0]?.values[0][0] || 0
+  const menuCount = db.exec("SELECT COUNT(*) as c FROM menu_items")[0]?.values[0][0] || 0
+
+  res.json({
+    success: true,
+    message: `已清空业务数据，保留 ${roomCount} 间客房、${guestCount} 位客人、${menuCount} 道菜品`,
+    kept: { rooms: roomCount, guests: guestCount, menu_items: menuCount }
+  })
+})
+
+// ─── 修复历史支出数据：report_date 对齐到 expense_date ───
+router.post('/fix-expenses', (req, res) => {
+  if (req.query.token !== 'seednow') return res.status(403).json({ error: 'Invalid token' })
+  const db = getDb()
+  db.run("UPDATE expenses SET report_date = expense_date WHERE expense_date != '' AND expense_date != report_date")
+  saveDb()
+  res.json({ success: true, message: '已将 report_date 对齐到 expense_date' })
+})
+
 export default router

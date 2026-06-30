@@ -95,6 +95,8 @@ function initSchema() {
   try { db.run("ALTER TABLE incense_revenue ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE expenses ADD COLUMN updated_at TEXT DEFAULT (datetime('now','localtime'))") } catch(e) {}
   try { db.run("ALTER TABLE rooms ADD COLUMN price REAL NOT NULL DEFAULT 0") } catch(e) {}
+  try { db.run("ALTER TABLE expenses ADD COLUMN expense_date TEXT DEFAULT ''") } catch(e) {}
+  try { db.run("ALTER TABLE expenses ADD COLUMN reimbursement_person TEXT DEFAULT ''") } catch(e) {}
   try { db.run("ALTER TABLE expenses ADD COLUMN receipt_image TEXT DEFAULT ''") } catch(e) {}
 
   db.run(`
@@ -170,6 +172,8 @@ function initSchema() {
       category TEXT NOT NULL DEFAULT '日常耗材',
       amount REAL DEFAULT 0,
       note TEXT DEFAULT '',
+      expense_date TEXT DEFAULT '',
+      reimbursement_person TEXT DEFAULT '',
       receipt_image TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))

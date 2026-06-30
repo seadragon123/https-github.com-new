@@ -123,7 +123,7 @@
               </div>
               <div class="room-right">
                 <span class="badge" :class="statusBadge(room.status)">{{ room.status }}</span>
-                <span v-if="room.status === '空房'" class="btn btn-sm btn-success" @click.stop="quickCheckin(room)">入住</span>
+                <span v-if="room.status === '空房'" class="btn btn-sm btn-success" @click.stop="$router.push('/rooms/' + room.id)">入住</span>
               </div>
             </div>
             <van-empty v-if="filteredRooms.length === 0" description="暂无符合条件的房间" />
@@ -259,6 +259,7 @@
         <van-empty v-if="checkoutList.length === 0" description="今日没有退房客人" />
         <button class="btn btn-outline btn-block mt-8" @click="showCheckoutList = false">关闭</button>
       </div>
+    </div>
 
       <!-- 更多服务弹窗 -->
     <div v-if="showMore" class="modal-overlay" @click.self="showMore = false">
@@ -283,10 +284,26 @@
           <div class="quick-btn" @click="showMore=false;$router.push('/profile')">
             <span class="qb-icon">👤</span><span class="qb-label">系统设置</span>
           </div>
+          <div class="quick-btn" @click="showMore=false;showDataMgmt=true">
+            <span class="qb-icon">📦</span><span class="qb-label">数据管理</span>
+          </div>
         </div>
         <button class="btn btn-outline btn-block mt-8" @click="showMore = false">关闭</button>
       </div>
     </div>
+
+    <!-- 数据管理弹窗 -->
+    <div v-if="showDataMgmt" class="modal-overlay" @click.self="showDataMgmt = false">
+      <div class="modal-content" style="max-width:360px">
+        <div class="modal-title">📦 数据管理</div>
+        <p class="text-sm text-muted mb-8" style="text-align:center">导出完整数据库备份，或从备份文件恢复</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-outline btn-block" @click="exportData">📥 导出备份</button>
+          <button class="btn btn-outline btn-block" @click="triggerImport">📤 导入恢复</button>
+        </div>
+        <input ref="fileInput" type="file" accept=".db" style="display:none" @change="importData" />
+        <button class="btn btn-outline btn-block mt-8" @click="showDataMgmt = false">关闭</button>
+      </div>
     </div>
   </div>
 </template>
@@ -436,6 +453,47 @@ const goCheckout = (booking) => {
   router.push(`/checkout/${booking.id}`)
 }
 
+// 数据导入导出
+const fileInput = ref(null)
+
+function triggerImport() {
+  fileInput.value?.click()
+}
+
+async function exportData() {
+  const token = localStorage.getItem('token')
+  const a = document.createElement('a')
+  a.href = `/api/data/export?token=${encodeURIComponent(token || '')}`
+  a.download = ''
+  a.click()
+}
+
+async function importData(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (!await showConfirm('⚠️ 导入将覆盖当前所有数据，确定继续？')) {
+    e.target.value = ''
+    return
+  }
+  try {
+    const formData = new FormData()
+    formData.append('db_file', file)
+    const token = localStorage.getItem('token')
+    const res = await fetch('/api/data/import', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (token || '') },
+      body: formData
+    })
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.error)
+    showToast('✅ ' + result.message)
+    setTimeout(() => location.reload(), 1500)
+  } catch (err) {
+    showFailToast(err.message)
+  }
+  e.target.value = ''
+}
+
 // 房间筛选跳转
 const filterRooms = (status) => {
   router.push({ path: '/rooms', query: { status } })
@@ -443,6 +501,7 @@ const filterRooms = (status) => {
 
 // 更多服务
 const showMore = ref(false)
+const showDataMgmt = ref(false)
 
 const statusList = computed(() => {
   const total = overview.totalRooms || 1

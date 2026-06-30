@@ -17,11 +17,11 @@
             <div class="dist-bar-wrap">
               <div class="dist-bar" :style="'width:' + (monthlyData.total > 0 ? (total / monthlyData.total * 100) : 0) + '%'"></div>
             </div>
-            <span class="dist-count">¥{{ total }}</span>
+            <span class="dist-count">¥{{ Number(total).toFixed(2) }}</span>
           </div>
           <div class="dist-total">
             <span>本月合计</span>
-            <span class="text-lg font-bold">¥{{ monthlyData.total }}</span>
+            <span class="text-lg font-bold">¥{{ monthlyData.total.toFixed(2) }}</span>
           </div>
           <van-empty v-if="monthlyData.total === 0" description="本月暂无支出" />
         </div>
@@ -30,8 +30,13 @@
       <!-- 本日支出 -->
       <div class="card">
         <div class="card-header">
-          <span>📋 本日支出</span>
-          <button class="btn btn-sm btn-outline" @click="loadExpenses">🔄 刷新</button>
+          <span>📋 支出记录</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input v-model="expDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="onDateRangeChange" />
+            <span class="text-sm text-muted">至</span>
+            <input v-model="expDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="onDateRangeChange" />
+            <button class="btn btn-sm btn-outline" @click="loadExpenses">🔄 刷新</button>
+          </div>
         </div>
         <div class="card-body">
           <div v-for="exp in expenses" :key="exp.id" class="expense-row">
@@ -41,6 +46,10 @@
                 <span class="text-sm text-muted">{{ exp.created_at?.slice(11, 16) }}</span>
               </div>
               <div class="expense-note">{{ exp.note }}</div>
+              <div class="expense-meta">
+                <span v-if="exp.expense_date" class="text-xs text-muted">📅 {{ exp.expense_date }}</span>
+                <span v-if="exp.reimbursement_person" class="text-xs text-muted">👤 {{ exp.reimbursement_person }}</span>
+              </div>
             </div>
             <div class="expense-amount">
               <div class="text-lg font-bold">¥{{ exp.amount }}</div>
@@ -69,6 +78,16 @@
         <div class="form-group">
           <label>金额 (¥)</label>
           <input v-model="expenseForm.amount" type="number" class="form-input" placeholder="0" />
+        </div>
+        <div class="flex-between gap-4">
+          <div class="form-group" style="flex:1">
+            <label>支出日期</label>
+            <input v-model="expenseForm.expense_date" type="date" class="form-input" />
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>报销人</label>
+            <input v-model="expenseForm.reimbursement_person" class="form-input" placeholder="选填" />
+          </div>
         </div>
         <div class="form-group">
           <label>备注</label>
@@ -109,11 +128,13 @@ import { showToast, showFailToast, showConfirmDialog } from 'vant'
 
 const categories = ['日常耗材', '餐饮成本', '维修杂费', '营销费用', '水电费用', '其他支出']
 const expenses = ref([])
+const expDateStart = ref(new Date().toISOString().slice(0, 10))
+const expDateEnd = ref(new Date().toISOString().slice(0, 10))
 const monthlyData = reactive({ categories: {}, total: 0 })
 const showAddForm = ref(false)
 const showImageViewer = ref(false)
 const viewImageUrl = ref('')
-const expenseForm = ref({ category: '日常耗材', amount: 0, note: '', receipt_image: '' })
+const expenseForm = ref({ category: '日常耗材', amount: 0, note: '', expense_date: new Date().toISOString().slice(0, 10), reimbursement_person: '', receipt_image: '' })
 const previewUrl = ref('')
 const fileInput = ref(null)
 const fileToUpload = ref(null)
@@ -141,7 +162,7 @@ async function loadExpenses() {
     const today = new Date().toISOString().slice(0, 10)
     const month = today.slice(0, 7)
     const [daily, summary] = await Promise.all([
-      api.getExpenses(today, month),
+      api.getExpenses(today, month, expDateStart.value, expDateEnd.value),
       api.getExpenseSummary(month)
     ])
     expenses.value = daily.items || []
@@ -150,14 +171,20 @@ async function loadExpenses() {
   } catch (e) { showFailToast(e.message) }
 }
 
+function onDateRangeChange() {
+  loadExpenses()
+}
+
 async function saveExpense() {
   if (!expenseForm.value.amount || expenseForm.value.amount <= 0) { showToast('请输入有效金额'); return }
   try {
     const formData = new FormData()
-    formData.append('report_date', new Date().toISOString().slice(0, 10))
+    formData.append('report_date', expenseForm.value.expense_date || new Date().toISOString().slice(0, 10))
     formData.append('category', expenseForm.value.category)
     formData.append('amount', expenseForm.value.amount)
     formData.append('note', expenseForm.value.note || '')
+    formData.append('expense_date', expenseForm.value.expense_date || new Date().toISOString().slice(0, 10))
+    formData.append('reimbursement_person', expenseForm.value.reimbursement_person || '')
 
     if (expenseForm.value.id) {
       // Update
@@ -170,7 +197,7 @@ async function saveExpense() {
     }
 
     showAddForm.value = false
-    expenseForm.value = { category: '日常耗材', amount: 0, note: '', receipt_image: '' }
+    expenseForm.value = { category: '日常耗材', amount: 0, note: '', expense_date: new Date().toISOString().slice(0, 10), reimbursement_person: '', receipt_image: '' }
     previewUrl.value = ''
     fileToUpload.value = null
     showToast(expenseForm.value.id ? '已更新' : '添加成功')
@@ -220,6 +247,8 @@ onMounted(loadExpenses)
 .expense-info { flex: 1; }
 .expense-cat { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .expense-note { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+.expense-meta { display: flex; gap: 12px; margin-top: 2px; }
+.expense-meta .text-xs { font-size: 11px; }
 .expense-amount { text-align: right; }
 .expense-actions { display: flex; gap: 4px; margin-top: 4px; }
 

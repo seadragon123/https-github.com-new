@@ -1,7 +1,7 @@
 const BASE = import.meta.env.VITE_API_BASE || '/api'
 
 // 后端图片/媒体文件的 base URL（从 API_BASE 推导或独立环境变量）
-const MEDIA_BASE = import.meta.env.VITE_MEDIA_BASE || BASE.replace(/\/api$/, '') || '/'
+const MEDIA_BASE = import.meta.env.VITE_MEDIA_BASE || BASE.replace(/\/api$/, '') || ''
 
 export function getMediaUrl(path) {
   if (!path) return ''
@@ -91,12 +91,31 @@ export default {
 
   // Incense
 
-  getIncenseSales(date) { return request(`/incense/sales?date=${date || ''}`) },
+  getIncenseSales(date, start_date, end_date) {
+    const params = new URLSearchParams()
+    if (start_date && end_date) {
+      params.set('start_date', start_date)
+      params.set('end_date', end_date)
+    } else if (date) {
+      params.set('date', date)
+    }
+    return request(`/incense/sales?${params.toString()}`)
+  },
   addIncenseSale(data) { return request('/incense/sales', { method: 'POST', body: JSON.stringify(data) }) },
   deleteIncenseSale(id) { return request(`/incense/sales/${id}`, { method: 'DELETE' }) },
 
   // Expenses (独立路由，含图片上传)
-  getExpenses(date, month) { return request(`/expenses?date=${date || ''}&month=${month || ''}`) },
+  getExpenses(date, month, start_date, end_date) {
+    const params = new URLSearchParams()
+    if (start_date && end_date) {
+      params.set('start_date', start_date)
+      params.set('end_date', end_date)
+    } else if (date) {
+      params.set('date', date)
+    }
+    if (month) params.set('month', month)
+    return request(`/expenses?${params.toString()}`)
+  },
   addExpense(data) {
     if (data instanceof FormData) {
       return request('/expenses', { method: 'POST', body: data })

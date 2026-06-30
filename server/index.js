@@ -32,6 +32,7 @@ import depositRoutes from './routes/deposits.js'
 import shiftReportRoutes from './routes/shift-report.js'
 import authRoutes, { initAdminUser } from './routes/auth.js'
 import seedRoutes from './routes/seed.js'
+import dataRoutes from './routes/data.js'
 
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/rooms', roomRoutes)
@@ -47,6 +48,7 @@ app.use('/api/deposits', depositRoutes)
 app.use('/api/shift-report', shiftReportRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/seed', seedRoutes)
+app.use('/api/data', dataRoutes)
 
 // 生产环境托管静态文件
 const distPath = join(__dirname, '..', 'dist')

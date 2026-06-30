@@ -32,8 +32,13 @@
       <!-- 今日销售记录 -->
       <div class="card">
         <div class="card-header">
-          <span>📋 今日销售</span>
-          <button class="btn btn-sm btn-outline" @click="loadSales">🔄 刷新</button>
+          <span>📋 销售记录</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input v-model="saleDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="onDateRangeChange" />
+            <span class="text-sm text-muted">至</span>
+            <input v-model="saleDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="onDateRangeChange" />
+            <button class="btn btn-sm btn-outline" @click="loadSales">🔄 刷新</button>
+          </div>
         </div>
         <div class="card-body">
           <div v-for="s in sales" :key="s.id" class="sale-row">
@@ -62,6 +67,10 @@
     <div v-if="showNewSale" class="modal-overlay" @click.self="showNewSale = false">
       <div class="modal-content">
         <div class="modal-title">➕ 新增销售</div>
+        <div class="form-group">
+          <label>销售日期 *</label>
+          <input v-model="saleForm.report_date" type="date" class="form-input" />
+        </div>
         <div class="form-group">
           <label>商品名称 *</label>
           <input v-model="saleForm.product_name" class="form-input" placeholder="输入商品名称" />
@@ -144,9 +153,11 @@ const sales = ref([])
 const activeBookings = ref([])
 const showNewSale = ref(false)
 const saleForm = ref(emptySaleForm())
+const saleDateStart = ref(new Date().toISOString().slice(0, 10))
+const saleDateEnd = ref(new Date().toISOString().slice(0, 10))
 
 function emptySaleForm() {
-  return { product_name: '', price: 0, quantity: 1, amount: 0, has_commission: 0, commission_rate: 5, commission_amount: 0, net_amount: 0, payment_method: '现金', booking_id: '', guest_name: '' }
+  return { report_date: new Date().toISOString().slice(0, 10), product_name: '', price: 0, quantity: 1, amount: 0, has_commission: 0, commission_rate: 5, commission_amount: 0, net_amount: 0, payment_method: '现金', booking_id: '', guest_name: '' }
 }
 
 const todayRevenue = computed(() => sales.value.reduce((s, r) => s + (r.net_amount || r.amount || 0), 0))
@@ -156,7 +167,7 @@ const todayCount = computed(() => sales.value.length)
 async function loadData() {
   try {
     const [s, b] = await Promise.all([
-      api.getIncenseSales(),
+      api.getIncenseSales(null, saleDateStart.value, saleDateEnd.value),
       api.getBookings('已入住')
     ])
     sales.value = s.items || []
@@ -166,9 +177,13 @@ async function loadData() {
 
 async function loadSales() {
   try {
-    const s = await api.getIncenseSales()
+    const s = await api.getIncenseSales(null, saleDateStart.value, saleDateEnd.value)
     sales.value = s.items || []
   } catch (e) { showFailToast(e.message) }
+}
+
+function onDateRangeChange() {
+  loadSales()
 }
 
 function calcAmount() {
@@ -197,7 +212,7 @@ async function submitSale() {
     showNewSale.value = false
     saleForm.value = emptySaleForm()
     showToast('登记成功！')
-    const s = await api.getIncenseSales()
+    const s = await api.getIncenseSales(null, saleDateStart.value, saleDateEnd.value)
     sales.value = s.items || []
   } catch (e) { showFailToast(e.message) }
 }

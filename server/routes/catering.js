@@ -153,48 +153,51 @@ router.get('/ranking', (req, res) => {
   const { period } = req.query // week / month / all
   const today = new Date().toISOString().slice(0, 10)
   let dateFilter = ''
+  const params = []
   if (period === 'week') {
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-    dateFilter = ` AND date(co.created_at) >= '${weekAgo}'`
+    dateFilter = ' AND date(created_at) >= ?'
+    params.push(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10))
   } else if (period === 'month') {
-    const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-    dateFilter = ` AND date(co.created_at) >= '${monthAgo}'`
+    dateFilter = ' AND date(created_at) >= ?'
+    params.push(new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10))
   }
 
-  // 从已结账和就餐中的订单中统计菜品销量
-  const rows = queryAll(`
-    SELECT
-      mi.id as menu_id,
-      mi.name,
-      mi.category,
-      mi.price,
-      COUNT(*) as order_count,
-      SUM(item_qty.qty) as total_qty,
-      SUM(item_qty.qty * mi.price) as total_revenue
-    FROM menu_items mi
-    LEFT JOIN (
-      SELECT co.id as order_id, json_each.value as item_json
-      FROM catering_orders co, json_each(co.items)
-      WHERE co.status IN ('已结账', '就餐中')${dateFilter}
-    ) o ON 1=1
-    CROSS JOIN (
-      SELECT
-        o2.order_id,
-        json_extract(o2.item_json, '$.id') as item_id,
-        CAST(json_extract(o2.item_json, '$.qty') AS INTEGER) as qty
-      FROM (
-        SELECT co2.id as order_id, json_each.value as item_json
-        FROM catering_orders co2, json_each(co2.items)
-        WHERE co2.status IN ('已结账', '就餐中')${dateFilter}
-      ) o2
-    ) item_qty ON item_qty.item_id = mi.id
-    GROUP BY mi.id
-    ORDER BY total_qty DESC, total_revenue DESC
-  `)
+  // 获取符合条件的订单
+  const orders = queryAll(
+    `SELECT * FROM catering_orders WHERE status IN ('已结账', '就餐中')${dateFilter} ORDER BY created_at DESC`,
+    params
+  )
+  // 获取所有菜品
+  const menus = queryAll('SELECT * FROM menu_items ORDER BY sort_order, id')
+
+  // JS 端统计每个菜品的销量
+  const salesMap = {}
+  for (const order of orders) {
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || [])
+    for (const item of items) {
+      if (!salesMap[item.id]) {
+        salesMap[item.id] = { total_qty: 0, total_revenue: 0 }
+      }
+      salesMap[item.id].total_qty += (item.qty || 1)
+      salesMap[item.id].total_revenue += (item.price || 0) * (item.qty || 1)
+    }
+  }
+
+  // 按销量排序
+  const ranking = menus
+    .map(m => ({
+      menu_id: m.id,
+      name: m.name,
+      category: m.category,
+      price: m.price,
+      total_qty: salesMap[m.id]?.total_qty || 0,
+      total_revenue: salesMap[m.id]?.total_revenue || 0
+    }))
+    .sort((a, b) => b.total_qty - a.total_qty || b.total_revenue - a.total_revenue)
 
   res.json({
     period: period || 'all',
-    items: rows.map((r, i) => ({ ...r, rank: i + 1 }))
+    items: ranking.map((r, i) => ({ ...r, rank: i + 1 }))
   })
 })
 

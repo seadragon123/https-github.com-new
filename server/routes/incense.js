@@ -7,13 +7,26 @@ const router = Router()
 
 // 销售记录
 router.get('/sales', (req, res) => {
-  const { date } = req.query
+  const { date, start_date, end_date } = req.query
   const today = new Date().toISOString().slice(0, 10)
-  const d = date || today
-  const rows = queryAll('SELECT * FROM incense_sales WHERE report_date = ? ORDER BY created_at DESC', [d])
+
+  let sql = 'SELECT * FROM incense_sales'
+  const params = []
+
+  if (start_date && end_date) {
+    sql += ' WHERE report_date >= ? AND report_date <= ?'
+    params.push(start_date, end_date)
+  } else {
+    const d = date || today
+    sql += ' WHERE report_date = ?'
+    params.push(d)
+  }
+  sql += ' ORDER BY created_at DESC'
+
+  const rows = queryAll(sql, params)
   const totalRevenue = rows.reduce((s, r) => s + (r.net_amount || r.amount || 0), 0)
   const totalCommission = rows.reduce((s, r) => s + (r.commission_amount || 0), 0)
-  res.json({ date: d, items: rows, totalRevenue, totalCommission })
+  res.json({ date: date || today, start_date, end_date, items: rows, totalRevenue, totalCommission })
 })
 
 // 新增销售

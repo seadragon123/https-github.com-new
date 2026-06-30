@@ -32,9 +32,9 @@ router.get('/summary', (req, res) => {
   )
   const incenseRevenue = incRows[0]?.total || 0
 
-  // 当日总支出
+  // 当日总支出（按 expense_date 查询，空时回退 report_date）
   const expRows = queryAll(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE report_date = ?`,
+    `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) = ?`,
     [d]
   )
   const totalExpense = expRows[0]?.total || 0
@@ -46,7 +46,7 @@ router.get('/summary', (req, res) => {
   const mRoom = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = '已完成' AND date(updated_at) LIKE ?`, [m + '%'])
   const mCat = queryAll(`SELECT COALESCE(SUM(total), 0) as total FROM catering_orders WHERE status = '已结账' AND date(paid_at) LIKE ?`, [m + '%'])
   const mInc = queryAll(`SELECT COALESCE(SUM(net_amount), 0) as total FROM incense_sales WHERE report_date LIKE ?`, [m + '%'])
-  const mExp = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE report_date LIKE ?`, [m + '%'])
+  const mExp = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) LIKE ?`, [m + '%'])
   const monthlyRevenue = (mRoom[0]?.total || 0) + (mCat[0]?.total || 0) + (mInc[0]?.total || 0)
   const monthlyExpense = mExp[0]?.total || 0
   const monthlyNet = Math.round((monthlyRevenue - monthlyExpense) * 100) / 100
@@ -94,7 +94,7 @@ router.get('/daily', (req, res) => {
 
   // 支出
   const expenseItems = queryAll(`
-    SELECT * FROM expenses WHERE report_date = ?
+    SELECT * FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) = ?
     ORDER BY created_at
   `, [d])
 
@@ -139,7 +139,7 @@ router.post('/auto-generate', (req, res) => {
 
   // 查询今日退房（已完成订单）
   const checkouts = queryAll(`
-    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel,
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel, b.payment_method,
            r.room_no, r.price, r.room_type
     FROM bookings b JOIN rooms r ON b.room_id = r.id
     WHERE b.status = '已完成' AND (b.check_out = ? OR date(b.updated_at) = ?)
@@ -149,40 +149,43 @@ router.post('/auto-generate', (req, res) => {
   // 查询今日新入住的
   const checkoutRoomIds = checkouts.map(c => c.room_id)
   const checkins = queryAll(`
-    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel,
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel, b.payment_method,
            r.room_no, r.price, r.room_type
     FROM bookings b JOIN rooms r ON b.room_id = r.id
     WHERE b.status = '已入住' AND b.check_in = ?
     ORDER BY b.check_in
   `, [d]).filter(b => !checkoutRoomIds.includes(b.room_id))
 
-  // 清空当日已有客房收入
+  // 清空当日已有客房收入（旧缓存表，保留向前兼容）
   runSql('DELETE FROM revenue_details WHERE report_date = ?', [d])
 
-  // 退房收入
+  // 退房收入（直接返回 bookings 数据，不再依赖缓存表）
+  const checkoutItems = []
   for (const b of checkouts) {
     const nights = Math.max(1, Math.ceil((new Date(b.check_out) - new Date(b.check_in)) / 86400000))
     const ppn = b.price_per_night > 0 ? b.price_per_night : b.price
     const amount = ppn * nights
-    runSql(`
-      INSERT INTO revenue_details (report_date, time, room_no, price, channel_type, channel_source, amount, payment_method)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [d, '退房', b.room_no, ppn, b.channel || '散客', `${b.guest_name}(退房)`, amount, '结账'])
+    checkoutItems.push({
+      room_no: b.room_no, time: '退房', price: ppn,
+      channel_type: b.channel || '散客', channel_source: `${b.guest_name}(退房)`,
+      amount, payment_method: b.payment_method || '现金'
+    })
   }
 
   // 新入住收入
+  const checkinItems = []
   for (const b of checkins) {
     const nights = Math.max(1, Math.ceil((new Date(b.check_out) - new Date(b.check_in)) / 86400000))
     const ppn = b.price_per_night > 0 ? b.price_per_night : b.price
     const amount = ppn * nights
-    runSql(`
-      INSERT INTO revenue_details (report_date, time, room_no, price, channel_type, channel_source, amount, payment_method)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [d, '入住', b.room_no, ppn, b.channel || '散客', `${b.guest_name}(入住)`, amount, '未付'])
+    checkinItems.push({
+      room_no: b.room_no, time: '入住', price: ppn,
+      channel_type: b.channel || '散客', channel_source: `${b.guest_name}(入住)`,
+      amount, payment_method: b.payment_method || '未付'
+    })
   }
 
-  // 返回完整的 revenue_details 记录
-  const items = queryAll('SELECT * FROM revenue_details WHERE report_date = ? ORDER BY id', [d])
+  const items = [...checkoutItems, ...checkinItems]
 
   res.json({
     success: true,
@@ -233,7 +236,7 @@ router.post('/auto-expenses', (req, res) => {
   const d = date || today
 
   // 直接加载当月支出数据到前端视图（已经是独立 expenses 表的数据）
-  const rows = queryAll('SELECT * FROM expenses WHERE report_date = ? ORDER BY created_at', [d])
+  const rows = queryAll("SELECT * FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) = ? ORDER BY created_at", [d])
 
   res.json({
     success: true,
@@ -341,7 +344,7 @@ router.get('/expenses', (req, res) => {
   const today = new Date().toISOString().slice(0, 10)
   const d = date || today
 
-  const dailyRows = queryAll('SELECT * FROM expenses WHERE report_date = ? ORDER BY category, id', [d])
+  const dailyRows = queryAll("SELECT * FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) = ? ORDER BY category, id", [d])
 
   const byCategory = {}
   for (const cat of EXPENSE_CATEGORIES) {
@@ -354,7 +357,7 @@ router.get('/expenses', (req, res) => {
   const monthlyByCategory = {}
   if (month) {
     for (const cat of EXPENSE_CATEGORIES) {
-      const mRows = queryAll('SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE category = ? AND report_date LIKE ?', [cat, month + '%'])
+      const mRows = queryAll("SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE category = ? AND COALESCE(NULLIF(expense_date, ''), report_date) LIKE ?", [cat, month + '%'])
       monthlyByCategory[cat] = mRows[0]?.total || 0
       monthlyTotal += monthlyByCategory[cat]
     }

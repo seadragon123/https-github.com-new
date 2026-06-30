@@ -36,7 +36,7 @@ function generateSnapshot(reportDate) {
     "SELECT COALESCE(SUM(net_amount),0) as total FROM incense_sales WHERE report_date=?", [d]
   )[0]?.total || 0
   const totalExpense = queryAll(
-    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE report_date=?", [d]
+    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date)=?", [d]
   )[0]?.total || 0
 
   // 押金概况
