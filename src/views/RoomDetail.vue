@@ -84,7 +84,7 @@
 
         <!-- 删除（编辑模式） -->
         <div v-if="editing" class="card-footer">
-          <button class="btn btn-danger btn-block" @click="deleteRoom">Delete 删除此房间</button>
+          <button class="btn btn-danger btn-block" @click="deleteRoom">删除此房间</button>
         </div>
 
         <!-- 操作按钮（查看模式） -->
@@ -298,10 +298,10 @@ async function deleteRoom() {
   if (!await showConfirm('确定要删除房间 ' + room.value.room_no + ' 吗？\n此操作不可恢复。')) return
   try {
     await api.deleteRoom(room.value.id)
-    showToast('Room deleted')
+    showToast('已删除')
     setTimeout(() => router.push('/rooms'), 500)
   } catch (err) {
-    showToast('Delete failed: ' + err.message)
+    showToast('删除失败: ' + err.message)
   }
 }
 

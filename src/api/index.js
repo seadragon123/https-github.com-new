@@ -23,7 +23,7 @@ async function request(url, options = {}) {
   const res = await fetch(`${BASE}${url}`, { headers, ...options })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: '请求失败' }))
-    throw new Error(err.error || `HTTP ${res.status}`)
+    throw new Error(err.error || `请求失败 (${res.status})`)
   }
   return res.json()
 }
