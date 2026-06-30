@@ -86,8 +86,9 @@
           <label>数量</label>
           <input v-model.number="saleForm.quantity" type="number" class="form-input" min="1" @input="calcAmount" />
         </div>
-        <div class="form-group">
-          <label><span style="font-weight:700;color:var(--danger)">金额 ¥{{ saleForm.amount }}</span></label>
+        <div class="calc-amount-row">
+          <span class="calc-amount-label">金额</span>
+          <span class="calc-amount-value">¥{{ saleForm.amount }}</span>
         </div>
         <div class="form-group">
           <label>是否返佣</label>
@@ -266,6 +267,25 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+.calc-amount-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  margin-bottom: 14px;
+  border-bottom: 1px dashed var(--gray-200);
+}
+.calc-amount-label {
+  font-size: 12px;
+  color: var(--gray-700);
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+.calc-amount-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--danger);
+}
 .bill-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
 .bill-row.total { font-weight: 700; font-size: 16px; border-top: 1px dashed var(--gray-300); padding-top: 8px; margin-top: 4px; }
 
