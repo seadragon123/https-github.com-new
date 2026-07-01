@@ -13,6 +13,16 @@ app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
+// 禁用静态资源缓存（手机浏览器强缓存导致不更新）
+app.use((req, res, next) => {
+  if (req.path.match(/\.(html|js|css)$/)) {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.set('Pragma', 'no-cache')
+    res.set('Expires', '0')
+  }
+  next()
+})
+
 // 静态文件：上传的图片
 const UPLOADS_STATIC = process.env.UPLOADS_STATIC || join(__dirname, 'uploads')
 app.use('/uploads', express.static(UPLOADS_STATIC))
