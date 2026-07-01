@@ -145,7 +145,33 @@
           </div>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto">
-          <table class="data-table" v-if="paidOrders.length > 0">
+          <!-- 移动端：卡片布局 -->
+          <div class="paid-cards">
+            <div v-for="o in paidOrders" :key="o.id" class="order-card" @click="toggleOrderDetail(o.id)">
+              <div class="order-header">
+                <div class="flex-between">
+                  <div>
+                    <span class="order-no">{{ o.order_no }}</span>
+                    <span class="badge" :class="o.order_type==='外卖'?'badge-orange':'badge-blue'">{{ o.order_type }}</span>
+                  </div>
+                  <span class="order-total">¥{{ o.total }}</span>
+                </div>
+                <div class="order-meta">
+                  <span>{{ o.guest_name }}</span>
+                  <span class="text-sm text-muted">{{ o.payment_method || '—' }}</span>
+                  <span class="text-xs text-muted">{{ o.paid_at?.slice(5,16) || '—' }}</span>
+                </div>
+              </div>
+              <div v-if="expandedOrder === o.id" class="order-items">
+                <div v-for="item in o.items" :key="item.id" class="item-row">
+                  <span>{{ item.name }} × {{ item.qty }}</span>
+                  <span>¥{{ item.price * item.qty }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 桌面端：表格 -->
+          <table class="data-table desktop-only" v-if="paidOrders.length > 0">
             <thead>
               <tr>
                 <th>订单号</th>
@@ -572,4 +598,12 @@ onMounted(loadData)
 .clickable-row { cursor: pointer; transition: background .1s; }
 .clickable-row:hover { background: var(--primary-light); }
 .clickable-row:active { background: var(--gray-200); }
+
+/* 移动端卡片 / 桌面端表格切换 */
+.paid-cards { display: block; }
+.desktop-only { display: none; }
+@media (min-width: 768px) {
+  .paid-cards { display: none; }
+  .desktop-only { display: table; }
+}
 </style>

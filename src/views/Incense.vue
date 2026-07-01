@@ -33,10 +33,10 @@
       <div class="card">
         <div class="card-header">
           <span>📋 销售记录</span>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input v-model="saleDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="onDateRangeChange" />
-            <span class="text-sm text-muted">至</span>
-            <input v-model="saleDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="onDateRangeChange" />
+          <div class="filter-bar">
+            <input v-model="saleDateStart" type="date" class="filter-date-input" @change="onDateRangeChange" />
+            <span class="text-sm text-muted filter-sep">至</span>
+            <input v-model="saleDateEnd" type="date" class="filter-date-input" @change="onDateRangeChange" />
             <button class="btn btn-sm btn-outline" @click="loadSales">🔄 刷新</button>
           </div>
         </div>
@@ -297,4 +297,19 @@ onMounted(loadData)
 .sale-amount { text-align: right; }
 .sale-total { font-size: 15px; font-weight: 700; color: var(--danger); }
 .expense-actions { display: flex; gap: 4px; margin-top: 4px; justify-content: flex-end; }
+
+/* 日期筛选栏 — 移动端换行 */
+.filter-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.filter-date-input { width: 120px; font-size: 11px; padding: 6px 8px; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); outline: none; background: #fff; color: var(--gray-900); }
+.filter-date-input:focus { border-color: var(--primary); }
+.filter-sep { flex-shrink: 0; }
+@media (max-width: 400px) {
+  .filter-date-input { width: 108px; }
+}
+
+/* 销售行移动端优化 */
+@media (max-width: 360px) {
+  .sale-row { flex-wrap: wrap; }
+  .sale-amount { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+}
 </style>
