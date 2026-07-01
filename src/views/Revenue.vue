@@ -332,6 +332,7 @@ async function loadCatering() {
       items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
       _key: genKey()
     }))
+    refreshMonthlySummary()
   } catch (e) { /* ignore */ }
 }
 
@@ -440,10 +441,19 @@ async function autoExpenses() {
     const items = r.items || []
     allExpenses.value = items.map(e => ({ ...e, _key: genKey() }))
     updateExpenses()
+    refreshMonthlySummary()
     showToast(`✅ 已加载 ${items.length} 笔支出`)
   } catch (err) {
     showToast('❌ ' + err.message)
   }
+}
+
+async function refreshMonthlySummary() {
+  const month = reportDate.value.slice(0, 7)
+  try {
+    const sum = await api.getRevenueSummary(reportDate.value, month)
+    summary.value.monthly = sum.monthly
+  } catch (e) { /* 静默失败，保留旧值 */ }
 }
 
 function deleteRoomRow(i) {
@@ -500,7 +510,7 @@ function addExpenseRow() {
 
 function deleteExpenseRow(id, i) {
   if (id) {
-    api.deleteExpense(id).catch(e => showFailToast(e.message))
+    api.deleteExpense(id).then(() => refreshMonthlySummary()).catch(e => showFailToast(e.message))
   }
   allExpenses.value.splice(i, 1)
   updateExpenses()
