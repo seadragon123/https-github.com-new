@@ -12,20 +12,22 @@
       <div class="card">
         <div class="card-header">📊 {{ currentMonth }} 支出分布</div>
         <div class="card-body">
-          <div v-for="(total, cat) in monthlyData.categories" :key="cat" class="dist-row" v-if="total > 0">
-            <div class="dist-header">
-              <span class="dist-icon">{{ catIcon(cat) }}</span>
-              <span class="dist-label">{{ cat }}</span>
-              <span class="dist-amount">¥{{ Number(total).toFixed(2) }}</span>
-            </div>
-            <div class="dist-bar-row">
-              <div class="dist-bar-wrap">
-                <div class="dist-bar" :class="'bar-' + barColor(cat)"
-                     :style="{ width: pct(total) + '%' }"></div>
+          <template v-for="(total, cat) in monthlyData.categories" :key="cat">
+            <div v-if="total > 0" class="dist-row">
+              <div class="dist-header">
+                <span class="dist-icon">{{ catIcon(cat) }}</span>
+                <span class="dist-label">{{ cat }}</span>
+                <span class="dist-amount">¥{{ Number(total).toFixed(2) }}</span>
               </div>
-              <span class="dist-pct">{{ pct(total) }}%</span>
+              <div class="dist-bar-row">
+                <div class="dist-bar-wrap">
+                  <div class="dist-bar" :class="'bar-' + barColor(cat)"
+                       :style="{ width: pct(total) + '%' }"></div>
+                </div>
+                <span class="dist-pct">{{ pct(total) }}%</span>
+              </div>
             </div>
-          </div>
+          </template>
           <div class="dist-total" v-if="monthlyData.total > 0">
             <span>本月合计 {{ itemCount }} 项</span>
             <span class="dist-total-amount">¥{{ monthlyData.total.toFixed(2) }}</span>
