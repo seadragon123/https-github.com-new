@@ -2,7 +2,7 @@
   <div class="page">
     <header class="page-header">
       <div class="flex-between">
-        <h1>💰 营业日报</h1>
+        <h1>💰 营业报表</h1>
         <div class="flex-center">
           <button class="btn btn-sm btn-outline" @click="printReport">🖨️ 打印</button>
           <button class="btn btn-sm btn-outline" @click="exportCSV">📥 CSV</button>
@@ -11,19 +11,25 @@
     </header>
 
     <div class="page-body">
-      <!-- 日期 & 报告人 -->
+      <!-- 日期筛选 & 报告人 -->
       <div class="card">
         <div class="card-body">
-          <div class="flex-between">
-            <div class="form-group" style="flex:1;margin-bottom:0">
-              <label>日期</label>
-              <input v-model="reportDate" type="date" class="form-input" @change="loadAll" />
-            </div>
-            <div class="form-group" style="flex:1;margin-left:12px;margin-bottom:0">
-              <label>报告人</label>
-              <input v-model="reporter" class="form-input" placeholder="签字" />
-            </div>
+          <div class="preset-bar">
+            <button class="btn btn-sm btn-outline" @click="setPresetToday">今日</button>
+            <button class="btn btn-sm btn-outline" @click="setPresetWeek">本周</button>
+            <button class="btn btn-sm btn-outline" @click="setPresetMonth">本月</button>
           </div>
+          <div class="filter-bar" style="margin-top:10px">
+            <input v-model="dateStart" type="date" class="filter-date-input" @change="onDateRangeChange" />
+            <span class="filter-sep">至</span>
+            <input v-model="dateEnd" type="date" class="filter-date-input" @change="onDateRangeChange" />
+            <button class="btn btn-sm btn-outline" style="flex-shrink:0" @click="loadAll">🔄 刷新</button>
+          </div>
+          <div class="form-group" style="margin-top:12px;margin-bottom:0">
+            <label>报告人</label>
+            <input v-model="reporter" class="form-input" placeholder="签字" />
+          </div>
+          <p v-if="!isSingleDay" class="range-hint text-sm text-muted">多日区间为只读汇总，不可编辑保存</p>
         </div>
       </div>
 
@@ -31,7 +37,7 @@
       <div class="card">
         <div class="card-header">
           <span>🏨 客房收入</span>
-          <div style="display:flex;gap:6px">
+          <div v-if="isSingleDay" style="display:flex;gap:6px">
             <button class="btn btn-sm btn-success" @click="autoGenerate">🤖 刷新</button>
           </div>
         </div>
@@ -70,7 +76,7 @@
       <div class="card">
         <div class="card-header">
           <span>🪷 请香收入</span>
-          <div style="display:flex;gap:6px">
+          <div v-if="isSingleDay" style="display:flex;gap:6px">
             <button class="btn btn-sm btn-success" @click="autoIncense">🤖 刷新</button>
           </div>
         </div>
@@ -111,7 +117,7 @@
       <div class="card">
         <div class="card-header">
           <span>🍜 餐饮收入</span>
-          <div style="display:flex;gap:6px">
+          <div v-if="isSingleDay" style="display:flex;gap:6px">
             <button class="btn btn-sm btn-success" @click="loadCatering">🤖 刷新</button>
           </div>
         </div>
@@ -150,7 +156,7 @@
       <div class="card">
         <div class="card-header">
           <span>💸 支出明细</span>
-          <div style="display:flex;gap:6px">
+          <div v-if="isSingleDay" style="display:flex;gap:6px">
             <button class="btn btn-sm btn-success" @click="autoExpenses">🤖 刷新</button>
           </div>
         </div>
@@ -180,7 +186,7 @@
           </table>
         </div>
         <div class="card-footer flex-between">
-          <span class="text-sm">当日总支出</span>
+          <span class="text-sm">{{ periodPrefix }}总支出</span>
           <span class="stat-num text-danger">¥{{ expenseTotal.toFixed(2) }}</span>
         </div>
       </div>
@@ -199,35 +205,36 @@
             </thead>
             <tbody>
               <tr class="summary-row">
-                <td>当日客房收入</td>
+                <td>{{ periodPrefix }}客房收入</td>
                 <td class="stat-num">¥{{ summary.daily.roomRevenue }}</td>
                 <td class="text-sm text-muted">= 已完成退房订单</td>
               </tr>
               <tr class="summary-row">
-                <td>当日餐饮收入</td>
+                <td>{{ periodPrefix }}餐饮收入</td>
                 <td class="stat-num">¥{{ summary.daily.cateringRevenue }}</td>
                 <td class="text-sm text-muted">= 已结账餐饮订单</td>
               </tr>
               <tr class="summary-row">
-                <td>当日请香收入</td>
+                <td>{{ periodPrefix }}请香收入</td>
                 <td class="stat-num">¥{{ summary.daily.incenseRevenue }}</td>
                 <td class="text-sm text-muted">= 请香销售（扣除返佣）</td>
               </tr>
               <tr class="summary-row total-row">
-                <td><strong>当日总收入</strong></td>
+                <td><strong>{{ periodPrefix }}总收入</strong></td>
                 <td><strong>¥{{ summary.daily.totalRevenue }}</strong></td>
                 <td class="text-sm text-muted">= 客房 + 餐饮 + 请香</td>
               </tr>
               <tr class="summary-row">
-                <td>当日总支出</td>
+                <td>{{ periodPrefix }}总支出</td>
                 <td class="stat-num text-danger">¥{{ summary.daily.totalExpense }}</td>
                 <td class="text-sm text-muted">= 支出小计</td>
               </tr>
               <tr class="summary-row net-row">
-                <td><strong>当日净现金流</strong></td>
+                <td><strong>{{ periodPrefix }}净现金流</strong></td>
                 <td><strong :class="netClass">¥{{ summary.daily.netCashflow.toFixed(2) }}</strong></td>
                 <td class="text-sm text-muted">= 总收入 - 总支出</td>
               </tr>
+              <template v-if="isSingleDay">
               <tr><td colspan="3" class="sep-line"></td></tr>
               <tr class="summary-row">
                 <td>本月累计收入</td>
@@ -244,6 +251,7 @@
                 <td><strong :class="monthNetClass">¥{{ summary.monthly.netBalance.toFixed(2) }}</strong></td>
                 <td class="text-sm text-muted">= 累计收入 - 累计支出</td>
               </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -276,7 +284,22 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../api/index.js'
 import { showToast, showFailToast, showConfirmDialog } from 'vant'
 
-const reportDate = ref(new Date().toISOString().slice(0, 10))
+const todayStr = () => new Date().toISOString().slice(0, 10)
+
+function getMondayOfWeek(d = new Date()) {
+  const date = new Date(d)
+  const day = date.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  date.setDate(date.getDate() + diff)
+  return date.toISOString().slice(0, 10)
+}
+
+function getFirstDayOfMonth(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+const dateStart = ref(todayStr())
+const dateEnd = ref(todayStr())
 const reporter = ref('')
 const roomItems = ref([])
 const incenseItems = ref([])
@@ -325,8 +348,9 @@ function unitPrice(r) {
 }
 
 async function loadCatering() {
+  if (!isSingleDay.value) return
   try {
-    const data = await api.getCateringOrders(reportDate.value, '已结账')
+    const data = await api.getCateringOrders(dateStart.value, '已结账')
     cateringItems.value = (data.orders || []).map(o => ({
       ...o,
       items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
@@ -338,6 +362,10 @@ async function loadCatering() {
     refreshMonthlySummary()
   } catch (e) { /* ignore */ }
 }
+
+const isSingleDay = computed(() => dateStart.value === dateEnd.value)
+const periodPrefix = computed(() => isSingleDay.value ? '当日' : '期间')
+const periodLabel = computed(() => isSingleDay.value ? dateStart.value : `${dateStart.value} ~ ${dateEnd.value}`)
 
 const roomTotal = computed(() => roomItems.value.reduce((s, r) => s + (r.amount || 0), 0))
 const incenseTotal = computed(() => incenseItems.value.reduce((s, r) => s + (r.net_amount || r.amount || 0), 0))
@@ -416,9 +444,10 @@ function addRoomRow() {
 }
 
 async function autoGenerate() {
+  if (!isSingleDay.value) return
   if (!await showConfirm('确定从今日订单自动生成客房收入吗？\n\n将会清空现有明细，从退房+入住订单生成收入记录。')) return
   try {
-    const r = await api.autoGenerateRevenue(reportDate.value)
+    const r = await api.autoGenerateRevenue(dateStart.value)
     // 直接使用返回的 items 更新本地列表，不重载整页
     roomItems.value = (r.items || []).map(item => ({ ...item, _key: genKey() }))
     updateRoomTotal()
@@ -430,11 +459,11 @@ async function autoGenerate() {
 }
 
 async function autoIncense() {
+  if (!isSingleDay.value) return
   if (!await showConfirm('从请香销售记录自动生成请香收入？')) return
   try {
-    await api.autoGenerateIncense(reportDate.value)
-    // 重新从 incense_sales 源表加载，不重载整页
-    const incData = await api.getIncenseSales(reportDate.value)
+    await api.autoGenerateIncense(dateStart.value)
+    const incData = await api.getIncenseSales(dateStart.value)
     incenseItems.value = (incData.items || []).map(r => ({ ...r, _key: genKey() }))
     updateIncenseTotal()
     refreshMonthlySummary()
@@ -445,8 +474,9 @@ async function autoIncense() {
 }
 
 async function autoExpenses() {
+  if (!isSingleDay.value) return
   try {
-    const r = await api.autoGenerateExpenses(reportDate.value)
+    const r = await api.autoGenerateExpenses(dateStart.value)
     // 从 expenses 表重新加载到视图
     const items = r.items || []
     allExpenses.value = items.map(e => ({ ...e, _key: genKey() }))
@@ -459,9 +489,10 @@ async function autoExpenses() {
 }
 
 async function refreshMonthlySummary() {
-  const month = reportDate.value.slice(0, 7)
+  if (!isSingleDay.value) return
+  const month = dateEnd.value.slice(0, 7)
   try {
-    const sum = await api.getRevenueSummary(reportDate.value, month)
+    const sum = await api.getRevenueSummary(dateStart.value, month)
     summary.value.monthly = sum.monthly
   } catch (e) { /* 静默失败，保留旧值 */ }
 }
@@ -532,34 +563,64 @@ function updateExpenses() {
   summary.value.daily.netCashflow = summary.value.daily.totalRevenue - total
 }
 
+function setPresetToday() {
+  const t = todayStr()
+  dateStart.value = t
+  dateEnd.value = t
+  loadAll()
+}
+
+function setPresetWeek() {
+  dateStart.value = getMondayOfWeek()
+  dateEnd.value = todayStr()
+  loadAll()
+}
+
+function setPresetMonth() {
+  dateStart.value = getFirstDayOfMonth()
+  dateEnd.value = todayStr()
+  loadAll()
+}
+
+function onDateRangeChange() {
+  if (dateStart.value && dateEnd.value) loadAll()
+}
+
 async function loadAll() {
-  const date = reportDate.value
-  const month = date.slice(0, 7)
+  if (dateStart.value > dateEnd.value) {
+    showFailToast('开始日期不能晚于结束日期')
+    return
+  }
   try {
-    // 自动从各业务模块拉取当天数据
-    const [roomRes, expRes, sum] = await Promise.all([
-      api.autoGenerateRevenue(date).catch(() => ({ items: [], total: 0 })),
-      api.autoGenerateExpenses(date).catch(() => ({ items: [], total: 0 })),
-      api.getRevenueSummary(date, month)
-    ])
-    // 加载客房收入
-    roomItems.value = (roomRes.items || []).map(r => ({ ...r, _key: genKey() }))
-    // 加载请香收入（从 incense_sales 取，含商品名称和数量）
-    const incData = await api.getIncenseSales(date)
-    incenseItems.value = (incData.items || []).map(r => ({ ...r, _key: genKey() }))
-    // 加载支出
-    allExpenses.value = (expRes.items || []).map(e => ({ ...e, _key: genKey() }))
-    expensesData.value = expRes
-    summary.value = sum
-    // 加载餐饮收入
-    loadCatering()
+    const data = await api.getRevenueRange(dateStart.value, dateEnd.value)
+    roomItems.value = (data.room_items || []).map(r => ({ ...r, _key: genKey() }))
+    incenseItems.value = (data.incense_items || []).map(r => ({ ...r, _key: genKey() }))
+    cateringItems.value = (data.catering_items || []).map(o => ({
+      ...o,
+      items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
+      _key: genKey()
+    }))
+    allExpenses.value = (data.expense_items || []).map(e => ({ ...e, _key: genKey() }))
+    const period = data.period || {}
+    summary.value = {
+      daily: {
+        roomRevenue: period.roomRevenue || 0,
+        cateringRevenue: period.cateringRevenue || 0,
+        incenseRevenue: period.incenseRevenue || 0,
+        totalRevenue: period.totalRevenue || 0,
+        totalExpense: period.totalExpense || 0,
+        netCashflow: period.netCashflow || 0
+      },
+      monthly: data.monthly || { totalRevenue: 0, totalExpense: 0, netBalance: 0 }
+    }
   } catch (e) {
     showFailToast(e.message)
   }
 }
 
 async function saveAll() {
-  const date = reportDate.value
+  if (!isSingleDay.value) return
+  const date = dateStart.value
   try {
     // Only save rows that have data
     await api.clearRevenueDetails(date)
@@ -587,7 +648,8 @@ async function saveAll() {
 
 // 打印报表
 function printReport() {
-  const title = `营业日报 - ${reportDate.value}`
+  const title = `营业报表 - ${periodLabel.value}`
+  const prefix = periodPrefix.value
   let html = `<html><head><meta charset="utf-8"><title>${title}</title>
     <style>
       body { font-family: SimSun, serif; padding: 20px; font-size: 14px; }
@@ -602,8 +664,8 @@ function printReport() {
       .report-footer { text-align: right; margin-top: 20px; font-size: 13px; }
       @media print { body { -webkit-print-color-adjust: exact; } }
     </style></head><body>
-    <h1>🏨 福源登山酒店 - 营业日报</h1>
-    <div class="meta">日期: ${reportDate.value} | 报告人: ${reporter.value || '未填写'}</div>`
+    <h1>🏨 福源登山酒店 - 营业报表</h1>
+    <div class="meta">日期: ${periodLabel.value} | 报告人: ${reporter.value || '未填写'}</div>`
   
   // 客房收入
   if (roomItems.value.length > 0) {
@@ -637,18 +699,19 @@ function printReport() {
     }
     html += `</table><div class="total">支出合计: ¥${expenseTotal.value.toFixed(2)}</div>`
   }
-  const secNo = [roomItems, cateringItems, incenseItems, allExpenses].filter(a => a.value.length > 0).length
-  html += `<h3>${['五',''][0]}经营结果汇总</h3>
+  html += `<h3>经营结果汇总</h3>
   <table>
     <tr><th>项目</th><th>金额(元)</th></tr>
-    <tr><td>当日总收入</td><td>¥${summary.value.daily.totalRevenue}</td></tr>
-    <tr><td>当日总支出</td><td>¥${summary.value.daily.totalExpense}</td></tr>
-    <tr><td><strong>当日净现金流</strong></td><td><strong>¥${summary.value.daily.netCashflow.toFixed(2)}</strong></td></tr>
-    <tr><td>本月累计收入</td><td>¥${summary.value.monthly.totalRevenue.toFixed(2)}</td></tr>
+    <tr><td>${prefix}总收入</td><td>¥${summary.value.daily.totalRevenue}</td></tr>
+    <tr><td>${prefix}总支出</td><td>¥${summary.value.daily.totalExpense}</td></tr>
+    <tr><td><strong>${prefix}净现金流</strong></td><td><strong>¥${summary.value.daily.netCashflow.toFixed(2)}</strong></td></tr>`
+  if (isSingleDay.value) {
+    html += `<tr><td>本月累计收入</td><td>¥${summary.value.monthly.totalRevenue.toFixed(2)}</td></tr>
     <tr><td>本月累计支出</td><td>¥${summary.value.monthly.totalExpense.toFixed(2)}</td></tr>
-    <tr><td><strong>本月累计结余</strong></td><td><strong>¥${summary.value.monthly.netBalance.toFixed(2)}</strong></td></tr>
-  </table>
-  <div class="report-footer">报告人: ${reporter.value || '___________'}  |  ${reportDate.value}</div>
+    <tr><td><strong>本月累计结余</strong></td><td><strong>¥${summary.value.monthly.netBalance.toFixed(2)}</strong></td></tr>`
+  }
+  html += `</table>
+  <div class="report-footer">报告人: ${reporter.value || '___________'}  |  ${periodLabel.value}</div>
   </body></html>`
 
   const w = window.open('', '_blank')
@@ -660,8 +723,9 @@ function printReport() {
 // CSV 导出
 function exportCSV() {
   const BOM = '\uFEFF'
-  const date = reportDate.value
-  let csv = BOM + `营业日报,${date}\n\n`
+  const label = periodLabel.value
+  const prefix = periodPrefix.value
+  let csv = BOM + `营业报表,${label}\n\n`
   
   if (roomItems.value.length > 0) {
     csv += `客房收入\n房号,渠道,客户姓名,金额,支付方式\n`
@@ -692,18 +756,21 @@ function exportCSV() {
     csv += `,支出合计,¥${expenseTotal.value.toFixed(2)}\n\n`
   }
   csv += `经营汇总\n项目,金额\n`
-  csv += `当日总收入,¥${summary.value.daily.totalRevenue}\n`
-  csv += `当日总支出,¥${summary.value.daily.totalExpense}\n`
-  csv += `当日净现金流,¥${summary.value.daily.netCashflow.toFixed(2)}\n`
-  csv += `本月累计收入,¥${summary.value.monthly.totalRevenue.toFixed(2)}\n`
-  csv += `本月累计支出,¥${summary.value.monthly.totalExpense.toFixed(2)}\n`
-  csv += `本月累计结余,¥${summary.value.monthly.netBalance.toFixed(2)}\n`
+  csv += `${prefix}总收入,¥${summary.value.daily.totalRevenue}\n`
+  csv += `${prefix}总支出,¥${summary.value.daily.totalExpense}\n`
+  csv += `${prefix}净现金流,¥${summary.value.daily.netCashflow.toFixed(2)}\n`
+  if (isSingleDay.value) {
+    csv += `本月累计收入,¥${summary.value.monthly.totalRevenue.toFixed(2)}\n`
+    csv += `本月累计支出,¥${summary.value.monthly.totalExpense.toFixed(2)}\n`
+    csv += `本月累计结余,¥${summary.value.monthly.netBalance.toFixed(2)}\n`
+  }
   csv += `报告人,${reporter.value || ''}\n`
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url; a.download = `营业日报_${date}.csv`
+  const fileSuffix = isSingleDay.value ? dateStart.value : `${dateStart.value}_${dateEnd.value}`
+  a.href = url; a.download = `营业报表_${fileSuffix}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -712,6 +779,9 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
+.preset-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.range-hint { margin-top: 10px; margin-bottom: 0; }
+
 /* ===== 请香卡片样式 ===== */
 .incense-card {
   background: var(--gray-50);

@@ -58,6 +58,9 @@ export default {
 
   // Revenue / Reports
   getRevenueSummary(date, month) { return request(`/revenue/summary?date=${date || ''}&month=${month || ''}`) },
+  getRevenueRange(start_date, end_date) {
+    return request(`/revenue/range?start_date=${start_date || ''}&end_date=${end_date || ''}`)
+  },
   getDailyReport(date) { return request(`/revenue/daily?date=${date || ''}`) },
   autoGenerateRevenue(date) { return request('/revenue/auto-generate', { method: 'POST', body: JSON.stringify({ date }) }) },
   autoGenerateIncense(date) { return request('/revenue/auto-incense', { method: 'POST', body: JSON.stringify({ date }) }) },

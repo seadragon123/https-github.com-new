@@ -3,6 +3,173 @@ import { queryAll, queryOne, runSql, insertAndGetId } from '../db-helper.js'
 
 const router = Router()
 
+const TODAY = () => new Date().toISOString().slice(0, 10)
+
+function parseDateRange(start_date, end_date) {
+  const today = TODAY()
+  const start = start_date || today
+  const end = end_date || today
+  if (start > end) return { error: '开始日期不能晚于结束日期' }
+  return { start, end, isSingleDay: start === end }
+}
+
+function buildRoomItemsForDay(d) {
+  const checkouts = queryAll(`
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel, b.payment_method,
+           r.room_no, r.price, r.room_type
+    FROM bookings b JOIN rooms r ON b.room_id = r.id
+    WHERE b.status = '已完成' AND (b.check_out = ? OR date(b.updated_at) = ?)
+    ORDER BY b.check_in
+  `, [d, d])
+
+  const checkoutRoomIds = checkouts.map(c => c.room_id)
+  const checkins = queryAll(`
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel, b.payment_method,
+           r.room_no, r.price, r.room_type
+    FROM bookings b JOIN rooms r ON b.room_id = r.id
+    WHERE b.status = '已入住' AND b.check_in = ?
+    ORDER BY b.check_in
+  `, [d]).filter(b => !checkoutRoomIds.includes(b.room_id))
+
+  const toItem = (b, time) => {
+    const nights = Math.max(1, Math.ceil((new Date(b.check_out) - new Date(b.check_in)) / 86400000))
+    const ppn = b.price_per_night > 0 ? b.price_per_night : b.price
+    const amount = ppn * nights
+    return {
+      room_no: b.room_no, time, price: ppn,
+      channel_type: b.channel || '散客', channel_source: `${b.guest_name}(${time})`,
+      amount, payment_method: b.payment_method || (time === '入住' ? '未付' : '现金')
+    }
+  }
+
+  return [
+    ...checkouts.map(b => toItem(b, '退房')),
+    ...checkins.map(b => toItem(b, '入住'))
+  ]
+}
+
+function buildRoomItemsForRange(start, end) {
+  if (start === end) return buildRoomItemsForDay(start)
+
+  const checkouts = queryAll(`
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel, b.payment_method,
+           r.room_no, r.price, r.room_type
+    FROM bookings b JOIN rooms r ON b.room_id = r.id
+    WHERE b.status = '已完成'
+      AND ((b.check_out >= ? AND b.check_out <= ?) OR (date(b.updated_at) >= ? AND date(b.updated_at) <= ?))
+    ORDER BY b.check_in
+  `, [start, end, start, end])
+
+  const checkins = queryAll(`
+    SELECT b.id, b.room_id, b.guest_name, b.check_in, b.check_out, b.amount as booking_amount, b.price_per_night, b.channel, b.payment_method,
+           r.room_no, r.price, r.room_type
+    FROM bookings b JOIN rooms r ON b.room_id = r.id
+    WHERE b.status = '已入住'
+      AND b.check_in >= ? AND b.check_in <= ?
+      AND NOT EXISTS (
+        SELECT 1 FROM bookings b2
+        WHERE b2.room_id = b.room_id AND b2.status = '已完成'
+          AND (b2.check_out = b.check_in OR date(b2.updated_at) = b.check_in)
+      )
+    ORDER BY b.check_in
+  `, [start, end])
+
+  const toItem = (b, time) => {
+    const nights = Math.max(1, Math.ceil((new Date(b.check_out) - new Date(b.check_in)) / 86400000))
+    const ppn = b.price_per_night > 0 ? b.price_per_night : b.price
+    const amount = ppn * nights
+    return {
+      room_no: b.room_no, time, price: ppn,
+      channel_type: b.channel || '散客', channel_source: `${b.guest_name}(${time})`,
+      amount, payment_method: b.payment_method || (time === '入住' ? '未付' : '现金')
+    }
+  }
+
+  return [
+    ...checkouts.map(b => toItem(b, '退房')),
+    ...checkins.map(b => toItem(b, '入住'))
+  ]
+}
+
+function getMonthlySummary(month) {
+  const mRoom = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = '已完成' AND date(updated_at) LIKE ?`, [m + '%'])
+  const mCat = queryAll(`SELECT COALESCE(SUM(total), 0) as total FROM catering_orders WHERE status = '已结账' AND date(paid_at) LIKE ?`, [m + '%'])
+  const mInc = queryAll(`SELECT COALESCE(SUM(net_amount), 0) as total FROM incense_sales WHERE report_date LIKE ?`, [m + '%'])
+  const mExp = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) LIKE ?`, [m + '%'])
+  const monthlyRevenue = (mRoom[0]?.total || 0) + (mCat[0]?.total || 0) + (mInc[0]?.total || 0)
+  const monthlyExpense = mExp[0]?.total || 0
+  return {
+    totalRevenue: monthlyRevenue,
+    totalExpense: monthlyExpense,
+    netBalance: Math.round((monthlyRevenue - monthlyExpense) * 100) / 100
+  }
+}
+
+// ─── 区间报表（统一四板块查询） ───
+
+router.get('/range', (req, res) => {
+  const parsed = parseDateRange(req.query.start_date, req.query.end_date)
+  if (parsed.error) return res.status(400).json({ error: parsed.error })
+  const { start, end, isSingleDay } = parsed
+
+  const room_items = buildRoomItemsForRange(start, end)
+  const roomRevenue = room_items.reduce((s, r) => s + (r.amount || 0), 0)
+
+  const cateringRows = queryAll(`
+    SELECT * FROM catering_orders
+    WHERE status = '已结账' AND date(paid_at) >= ? AND date(paid_at) <= ?
+    ORDER BY paid_at
+  `, [start, end])
+  const catering_items = cateringRows.map(o => ({
+    ...o,
+    items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || [])
+  }))
+  const cateringRevenue = catering_items.reduce((s, o) => s + (o.total || 0), 0)
+
+  const incense_items = queryAll(
+    'SELECT * FROM incense_sales WHERE report_date >= ? AND report_date <= ? ORDER BY created_at',
+    [start, end]
+  )
+  const incenseRevenue = incense_items.reduce((s, r) => s + (r.net_amount || r.amount || 0), 0)
+
+  const expense_items = queryAll(
+    "SELECT * FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) >= ? AND COALESCE(NULLIF(expense_date, ''), report_date) <= ? ORDER BY created_at",
+    [start, end]
+  )
+  const totalExpense = expense_items.reduce((s, e) => s + (e.amount || 0), 0)
+
+  const totalRevenue = roomRevenue + cateringRevenue + incenseRevenue
+  const netCashflow = Math.round((totalRevenue - totalExpense) * 100) / 100
+
+  if (isSingleDay) {
+    runSql(
+      `INSERT OR REPLACE INTO daily_reports (report_date, room_revenue, catering_revenue, incense_revenue, total_expense, net_cashflow, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now','localtime'))`,
+      [start, roomRevenue, cateringRevenue, incenseRevenue, totalExpense, netCashflow]
+    )
+  }
+
+  const month = end.slice(0, 7)
+  res.json({
+    start_date: start,
+    end_date: end,
+    is_single_day: isSingleDay,
+    room_items,
+    catering_items,
+    incense_items,
+    expense_items,
+    period: {
+      roomRevenue,
+      cateringRevenue,
+      incenseRevenue,
+      totalRevenue,
+      totalExpense,
+      netCashflow
+    },
+    monthly: isSingleDay ? getMonthlySummary(month) : null
+  })
+})
+
 // ─── 经营汇总（自动从各模块拉取） ───
 
 router.get('/summary', (req, res) => {

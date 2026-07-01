@@ -273,7 +273,7 @@
             <span class="qb-icon">🔧</span><span class="qb-label">维修报修</span>
           </div>
           <div class="quick-btn" @click="showMore=false;$router.push('/revenue')">
-            <span class="qb-icon">💰</span><span class="qb-label">营业日报</span>
+            <span class="qb-icon">💰</span><span class="qb-label">营业报表</span>
           </div>
           <div class="quick-btn" @click="showMore=false;$router.push('/rooms')">
             <span class="qb-icon">🚪</span><span class="qb-label">全部房间</span>

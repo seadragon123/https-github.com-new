@@ -43,7 +43,7 @@ const roleMenus = {
     { path: '/', icon: '🏠', label: '首页' }, { path: '/rooms', icon: '🚪', label: '房间管理' },
     { path: '/guests', icon: '👤', label: '客人管理' }, { path: '/bookings', icon: '📋', label: '订单管理' },
     { path: '/catering', icon: '🍜', label: '餐厅管理' }, { path: '/incense', icon: '🪷', label: '请香管理' },
-    { path: '/expenses', icon: '💸', label: '支出管理' }, { path: '/revenue', icon: '💰', label: '营业日报' },
+    { path: '/expenses', icon: '💸', label: '支出管理' }, { path: '/revenue', icon: '💰', label: '营业报表' },
     { path: '/shift-report', icon: '📋', label: '交班报表' },
     { path: '/cleaning', icon: '🧹', label: '清洁管理' }, { path: '/maintenance', icon: '🔧', label: '维修管理' },
     { path: '/todos', icon: '✅', label: '待办事项' },
@@ -57,7 +57,7 @@ const roleMenus = {
     { path: '/maintenance', icon: '🔧', label: '维修管理' }, { path: '/todos', icon: '✅', label: '待办事项' },
   ],
   '餐厅': [ { path: '/catering', icon: '🍜', label: '餐厅管理' } ],
-  '财务': [ { path: '/revenue', icon: '💰', label: '营业日报' }, { path: '/expenses', icon: '💸', label: '支出管理' }, { path: '/shift-report', icon: '📋', label: '交班报表' } ],
+  '财务': [ { path: '/revenue', icon: '💰', label: '营业报表' }, { path: '/expenses', icon: '💸', label: '支出管理' }, { path: '/shift-report', icon: '📋', label: '交班报表' } ],
 }
 
 function loadRole() {

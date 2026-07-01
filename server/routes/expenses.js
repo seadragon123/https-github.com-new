@@ -102,22 +102,27 @@ router.post('/', upload.single('receipt_image'), (req, res) => {
 
 // 编辑支出
 router.put('/:id', upload.single('receipt_image'), (req, res) => {
-  const exp = queryOne('SELECT * FROM expenses WHERE id = ?', [req.params.id])
-  if (!exp) return res.status(404).json({ error: '支出记录不存在' })
+  try {
+    const exp = queryOne('SELECT * FROM expenses WHERE id = ?', [req.params.id])
+    if (!exp) return res.status(404).json({ error: '支出记录不存在' })
 
-  const { category, amount, note, expense_date, reimbursement_person } = req.body
-  let receiptImage = exp.receipt_image
-  if (req.file) {
-    receiptImage = `/uploads/receipts/${req.file.filename}`
-  } else if (req.body.receipt_image === '') {
-    receiptImage = ''
+    const { category, amount, note, expense_date, reimbursement_person } = req.body
+    let receiptImage = exp.receipt_image
+    if (req.file) {
+      receiptImage = `/uploads/receipts/${req.file.filename}`
+    } else if (req.body.receipt_image === '') {
+      receiptImage = ''
+    }
+
+    runSql(
+      `UPDATE expenses SET category=?, amount=?, note=?, expense_date=?, reimbursement_person=?, receipt_image=?, updated_at=datetime('now','localtime') WHERE id=?`,
+      [category ?? exp.category, amount ?? exp.amount, note ?? exp.note, expense_date ?? exp.expense_date, reimbursement_person ?? exp.reimbursement_person, receiptImage, req.params.id]
+    )
+    res.json({ success: true })
+  } catch (e) {
+    console.error('PUT /expenses/:id error:', e.message, e.stack)
+    res.status(500).json({ error: '保存失败: ' + (e.message || '未知错误') })
   }
-
-  runSql(
-    'UPDATE expenses SET category=?, amount=?, note=?, expense_date=?, reimbursement_person=?, receipt_image=?, updated_at=datetime(\'now\',\'localtime\') WHERE id=?',
-    [category ?? exp.category, amount ?? exp.amount, note ?? exp.note, expense_date ?? exp.expense_date, reimbursement_person ?? exp.reimbursement_person, receiptImage, req.params.id]
-  )
-  res.json({ success: true })
 })
 
 // 删除支出

@@ -84,7 +84,7 @@ const roleNavMap = {
     { path: '/catering', icon: '🍜', label: '餐厅管理' },
     { path: '/incense', icon: '🪷', label: '请香管理' },
     { path: '/expenses', icon: '💸', label: '支出管理' },
-    { path: '/revenue', icon: '💰', label: '营业日报' },
+    { path: '/revenue', icon: '💰', label: '营业报表' },
     { path: '/shift-report', icon: '📋', label: '交班报表' },
     { path: '/cleaning', icon: '🧹', label: '清洁管理' },
     { path: '/maintenance', icon: '🔧', label: '维修管理' },
@@ -106,7 +106,7 @@ const roleNavMap = {
     { path: '/catering', icon: '🍜', label: '餐厅管理' },
   ],
   '财务': [
-    { path: '/revenue', icon: '💰', label: '营业日报' },
+    { path: '/revenue', icon: '💰', label: '营业报表' },
     { path: '/expenses', icon: '💸', label: '支出管理' },
     { path: '/shift-report', icon: '📋', label: '交班报表' },
   ],

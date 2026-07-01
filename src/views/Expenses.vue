@@ -131,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api, { getMediaUrl } from '../api/index.js'
 import { showToast, showFailToast, showConfirmDialog } from 'vant'
 
@@ -139,7 +139,7 @@ const categories = ['日常耗材', '餐饮成本', '维修杂费', '营销费�
 const expenses = ref([])
 const expDateStart = ref(new Date().toISOString().slice(0, 10))
 const expDateEnd = ref(new Date().toISOString().slice(0, 10))
-const distribution = reactive({ categories: {}, total: 0, label: '' })
+const distribution = ref({ categories: {}, total: 0, label: '' })
 const showAddForm = ref(false)
 const showImageViewer = ref(false)
 const viewImageUrl = ref('')
@@ -149,11 +149,11 @@ const fileInput = ref(null)
 const fileToUpload = ref(null)
 
 const itemCount = computed(() =>
-  Object.values(distribution.categories).filter(v => v > 0).length
+  Object.values(distribution.value.categories).filter(v => v > 0).length
 )
 
 function pct(total) {
-  return distribution.total > 0 ? Number((total / distribution.total * 100).toFixed(1)) : 0
+  return distribution.value.total > 0 ? Number((total / distribution.value.total * 100).toFixed(1)) : 0
 }
 
 function catIcon(cat) {
@@ -193,11 +193,8 @@ async function loadExpenses() {
       cats[cat] = data.total || 0
       total += data.total || 0
     }
-    distribution.categories = cats
-    distribution.total = total
-
     const s = expDateStart.value, e = expDateEnd.value
-    distribution.label = s === e ? s : `${s} ~ ${e}`
+    distribution.value = { categories: cats, total, label: s === e ? s : `${s} ~ ${e}` }
   } catch (e) { showFailToast(e.message) }
 }
 
