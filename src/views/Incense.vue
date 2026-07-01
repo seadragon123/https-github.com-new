@@ -31,13 +31,13 @@
 
       <!-- 今日销售记录 -->
       <div class="card">
-        <div class="card-header">
+        <div class="card-header filterable">
           <span>📋 销售记录</span>
           <div class="filter-bar">
             <input v-model="saleDateStart" type="date" class="filter-date-input" @change="onDateRangeChange" />
-            <span class="text-sm text-muted filter-sep">至</span>
+            <span class="filter-sep">至</span>
             <input v-model="saleDateEnd" type="date" class="filter-date-input" @change="onDateRangeChange" />
-            <button class="btn btn-sm btn-outline" @click="loadSales">🔄 刷新</button>
+            <button class="btn btn-sm btn-outline" style="flex-shrink:0" @click="loadSales">🔄 刷新</button>
           </div>
         </div>
         <div class="card-body">
@@ -297,15 +297,6 @@ onMounted(loadData)
 .sale-amount { text-align: right; }
 .sale-total { font-size: 15px; font-weight: 700; color: var(--danger); }
 .expense-actions { display: flex; gap: 4px; margin-top: 4px; justify-content: flex-end; }
-
-/* 日期筛选栏 — 移动端换行 */
-.filter-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.filter-date-input { width: 120px; font-size: 11px; padding: 6px 8px; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); outline: none; background: #fff; color: var(--gray-900); }
-.filter-date-input:focus { border-color: var(--primary); }
-.filter-sep { flex-shrink: 0; }
-@media (max-width: 400px) {
-  .filter-date-input { width: 108px; }
-}
 
 /* 销售行移动端优化 */
 @media (max-width: 360px) {

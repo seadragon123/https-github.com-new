@@ -93,13 +93,13 @@
 
       <!-- 未结账订单 -->
       <div class="card">
-        <div class="card-header">
+        <div class="card-header filterable">
           <span>📋 未结账订单</span>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input v-model="orderDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadOrders" />
-            <span class="text-sm text-muted">至</span>
-            <input v-model="orderDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadOrders" />
-            <button class="btn btn-sm btn-outline" @click="loadOrders">🔄 刷新</button>
+          <div class="filter-bar">
+            <input v-model="orderDateStart" type="date" class="filter-date-input" @change="loadOrders" />
+            <span class="filter-sep">至</span>
+            <input v-model="orderDateEnd" type="date" class="filter-date-input" @change="loadOrders" />
+            <button class="btn btn-sm btn-outline" style="flex-shrink:0" @click="loadOrders">🔄 刷新</button>
           </div>
         </div>
         <div class="card-body">
@@ -135,16 +135,17 @@
 
       <!-- 已结账订单 -->
       <div class="card">
-        <div class="card-header">
+        <div class="card-header filterable">
           <span>✅ 已结账订单</span>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input v-model="paidDateStart" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadPaidOrders" />
-            <span class="text-sm text-muted">至</span>
-            <input v-model="paidDateEnd" type="date" class="form-input" style="width:130px;font-size:12px" @change="loadPaidOrders" />
-            <span class="text-sm text-muted">共 {{ paidOrders.length }} 单 · ¥{{ paidOrders.reduce((s,o) => s + (o.total||0), 0).toFixed(2) }}</span>
+          <div class="filter-bar">
+            <input v-model="paidDateStart" type="date" class="filter-date-input" @change="loadPaidOrders" />
+            <span class="filter-sep">至</span>
+            <input v-model="paidDateEnd" type="date" class="filter-date-input" @change="loadPaidOrders" />
+            <button class="btn btn-sm btn-outline" style="flex-shrink:0" @click="loadPaidOrders">🔄 刷新</button>
           </div>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto">
+          <div class="filter-summary" style="padding:8px 16px 0">共 {{ paidOrders.length }} 单 · ¥{{ paidOrders.reduce((s,o) => s + (o.total||0), 0).toFixed(2) }}</div>
           <!-- 移动端：卡片布局 -->
           <div class="paid-cards">
             <div v-for="o in paidOrders" :key="o.id" class="order-card" @click="toggleOrderDetail(o.id)">
