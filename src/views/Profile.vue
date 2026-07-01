@@ -38,7 +38,7 @@
           <button class="btn btn-sm btn-primary" @click="openUserForm({})">+ 新增用户</button>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto">
-          <table class="data-table desktop-table">
+          <table class="data-table">
             <thead>
               <tr>
                 <th>用户名</th>
@@ -214,6 +214,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { background: var(--gray-50); padding: 8px 4px; font-weight: 600; font-size: 12px; color: var(--gray-700); text-align: left; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+.data-table td { padding: 6px 4px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
 .radio-group { display: flex; gap: 16px; }
 .radio-item { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
 .radio-item input[type="radio"] { accent-color: var(--primary); }
