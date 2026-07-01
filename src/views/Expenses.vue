@@ -13,15 +13,22 @@
         <div class="card-header">📊 {{ currentMonth }} 支出分布</div>
         <div class="card-body">
           <div v-for="(total, cat) in monthlyData.categories" :key="cat" class="dist-row" v-if="total > 0">
-            <span class="dist-label">{{ cat }}</span>
-            <div class="dist-bar-wrap">
-              <div class="dist-bar" :style="'width:' + (monthlyData.total > 0 ? (total / monthlyData.total * 100) : 0) + '%'"></div>
+            <div class="dist-header">
+              <span class="dist-icon">{{ catIcon(cat) }}</span>
+              <span class="dist-label">{{ cat }}</span>
+              <span class="dist-amount">¥{{ Number(total).toFixed(2) }}</span>
             </div>
-            <span class="dist-count">¥{{ Number(total).toFixed(2) }}</span>
+            <div class="dist-bar-row">
+              <div class="dist-bar-wrap">
+                <div class="dist-bar" :class="'bar-' + barColor(cat)"
+                     :style="{ width: pct(total) + '%' }"></div>
+              </div>
+              <span class="dist-pct">{{ pct(total) }}%</span>
+            </div>
           </div>
-          <div class="dist-total">
-            <span>本月合计</span>
-            <span class="text-lg font-bold">¥{{ monthlyData.total.toFixed(2) }}</span>
+          <div class="dist-total" v-if="monthlyData.total > 0">
+            <span>本月合计 {{ itemCount }} 项</span>
+            <span class="dist-total-amount">¥{{ monthlyData.total.toFixed(2) }}</span>
           </div>
           <van-empty v-if="monthlyData.total === 0" description="本月暂无支出" />
         </div>
@@ -144,6 +151,24 @@ const currentMonth = computed(() => {
   return `${d.getFullYear()}年${d.getMonth() + 1}月`
 })
 
+const itemCount = computed(() =>
+  Object.values(monthlyData.categories).filter(v => v > 0).length
+)
+
+function pct(total) {
+  return monthlyData.total > 0 ? Number((total / monthlyData.total * 100).toFixed(1)) : 0
+}
+
+function catIcon(cat) {
+  const m = { '日常耗材':'🧹','餐饮成本':'🍳','维修杂费':'🔧','营销费用':'📢','水电费用':'⚡','其他支出':'📦' }
+  return m[cat] || '📌'
+}
+
+function barColor(cat) {
+  const m = { '日常耗材':'orange','餐饮成本':'green','维修杂费':'blue','营销费用':'purple','水电费用':'cyan','其他支出':'gray' }
+  return m[cat] || 'orange'
+}
+
 function triggerUpload() {
   fileInput.value?.click()
 }
@@ -237,12 +262,24 @@ onMounted(loadExpenses)
 </script>
 
 <style scoped>
-.dist-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.dist-label { font-size: 13px; color: var(--gray-700); min-width: 60px; }
-.dist-bar-wrap { flex: 1; height: 8px; background: var(--gray-100); border-radius: 4px; overflow: hidden; }
-.dist-bar { height: 100%; background: var(--primary); border-radius: 4px; transition: width .3s; }
-.dist-count { font-size: 13px; font-weight: 600; min-width: 60px; text-align: right; }
-.dist-total { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--gray-200); margin-top: 4px; font-size: 14px; }
+.dist-row { margin-bottom: 16px; }
+.dist-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.dist-icon { font-size: 15px; flex-shrink: 0; }
+.dist-label { font-size: 13px; color: var(--gray-700); font-weight: 500; }
+.dist-amount { margin-left: auto; font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.dist-bar-row { display: flex; align-items: center; gap: 8px; }
+.dist-bar-wrap { flex: 1; height: 14px; background: var(--gray-100); border-radius: 7px; overflow: hidden; }
+.dist-bar { height: 100%; border-radius: 7px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+/* bar colors */
+.bar-orange { background: linear-gradient(90deg, #F0A050, #E08830); }
+.bar-green  { background: linear-gradient(90deg, #5CB870, #3D9B55); }
+.bar-blue   { background: linear-gradient(90deg, #6090C8, #4578B0); }
+.bar-purple { background: linear-gradient(90deg, #9880C8, #7D60B0); }
+.bar-cyan   { background: linear-gradient(90deg, #50B8C0, #38A0A8); }
+.bar-gray   { background: linear-gradient(90deg, #A0A0A0, #888); }
+.dist-pct { font-size: 12px; font-weight: 600; color: var(--gray-500); min-width: 40px; text-align: right; flex-shrink: 0; }
+.dist-total { display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--gray-200); margin-top: 6px; font-size: 13px; color: var(--gray-700); }
+.dist-total-amount { font-size: 16px; font-weight: 700; color: var(--gray-900); }
 
 .expense-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
 .expense-info { flex: 1; }
