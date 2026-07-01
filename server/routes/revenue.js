@@ -92,10 +92,10 @@ function buildRoomItemsForRange(start, end) {
 }
 
 function getMonthlySummary(month) {
-  const mRoom = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = '已完成' AND date(updated_at) LIKE ?`, [m + '%'])
-  const mCat = queryAll(`SELECT COALESCE(SUM(total), 0) as total FROM catering_orders WHERE status = '已结账' AND date(paid_at) LIKE ?`, [m + '%'])
-  const mInc = queryAll(`SELECT COALESCE(SUM(net_amount), 0) as total FROM incense_sales WHERE report_date LIKE ?`, [m + '%'])
-  const mExp = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) LIKE ?`, [m + '%'])
+  const mRoom = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = '已完成' AND date(updated_at) LIKE ?`, [month + '%'])
+  const mCat = queryAll(`SELECT COALESCE(SUM(total), 0) as total FROM catering_orders WHERE status = '已结账' AND date(paid_at) LIKE ?`, [month + '%'])
+  const mInc = queryAll(`SELECT COALESCE(SUM(net_amount), 0) as total FROM incense_sales WHERE report_date LIKE ?`, [month + '%'])
+  const mExp = queryAll(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE COALESCE(NULLIF(expense_date, ''), report_date) LIKE ?`, [month + '%'])
   const monthlyRevenue = (mRoom[0]?.total || 0) + (mCat[0]?.total || 0) + (mInc[0]?.total || 0)
   const monthlyExpense = mExp[0]?.total || 0
   return {
