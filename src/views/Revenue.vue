@@ -332,6 +332,9 @@ async function loadCatering() {
       items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
       _key: genKey()
     }))
+    summary.value.daily.cateringRevenue = cateringTotal.value
+    summary.value.daily.totalRevenue = roomTotal.value + incenseTotal.value + cateringTotal.value
+    summary.value.daily.netCashflow = summary.value.daily.totalRevenue - summary.value.daily.totalExpense
     refreshMonthlySummary()
   } catch (e) { /* ignore */ }
 }
@@ -416,8 +419,11 @@ async function autoGenerate() {
   if (!await showConfirm('确定从今日订单自动生成客房收入吗？\n\n将会清空现有明细，从退房+入住订单生成收入记录。')) return
   try {
     const r = await api.autoGenerateRevenue(reportDate.value)
+    // 直接使用返回的 items 更新本地列表，不重载整页
+    roomItems.value = (r.items || []).map(item => ({ ...item, _key: genKey() }))
+    updateRoomTotal()
+    refreshMonthlySummary()
     showToast('✅ ' + r.message + '\n共' + r.items.length + '条，合计¥' + r.total)
-    loadAll()
   } catch (err) {
     showToast('❌ ' + err.message)
   }
@@ -427,8 +433,12 @@ async function autoIncense() {
   if (!await showConfirm('从请香销售记录自动生成请香收入？')) return
   try {
     await api.autoGenerateIncense(reportDate.value)
+    // 重新从 incense_sales 源表加载，不重载整页
+    const incData = await api.getIncenseSales(reportDate.value)
+    incenseItems.value = (incData.items || []).map(r => ({ ...r, _key: genKey() }))
+    updateIncenseTotal()
+    refreshMonthlySummary()
     showToast('✅ 请香收入已从销售记录生成')
-    loadAll()
   } catch (err) {
     showToast('❌ ' + err.message)
   }
@@ -467,7 +477,7 @@ function deleteRoomRow(i) {
 
 function updateRoomTotal() {
   summary.value.daily.roomRevenue = roomTotal.value
-  summary.value.daily.totalRevenue = roomTotal.value + incenseTotal.value
+  summary.value.daily.totalRevenue = roomTotal.value + incenseTotal.value + cateringTotal.value
   summary.value.daily.netCashflow = summary.value.daily.totalRevenue - summary.value.daily.totalExpense
 }
 
@@ -500,7 +510,7 @@ function recalcIncense(i) {
 
 function updateIncenseTotal() {
   summary.value.daily.incenseRevenue = incenseTotal.value
-  summary.value.daily.totalRevenue = roomTotal.value + incenseTotal.value
+  summary.value.daily.totalRevenue = roomTotal.value + incenseTotal.value + cateringTotal.value
   summary.value.daily.netCashflow = summary.value.daily.totalRevenue - summary.value.daily.totalExpense
 }
 
